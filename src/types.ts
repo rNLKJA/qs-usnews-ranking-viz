@@ -8,8 +8,10 @@ export interface University {
   name: string
   shortName: string
   country: string
-  /** Primary web domain — used to resolve a logo. */
+  /** Primary web domain — used to resolve a logo via favicon. */
   domain: string
+  /** Optional explicit logo path (overrides the favicon). */
+  logo?: string
   /** Link to the university's QS profile page. */
   qsUrl: string
   /** Link to the university's US News Best Global Universities profile page. */

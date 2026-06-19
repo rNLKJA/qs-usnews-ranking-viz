@@ -1,21 +1,54 @@
 @import 'tailwindcss';
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
 
-/* Design tokens shared across the app and the D3 visualisations. */
+@custom-variant dark (&:is(.dark *));
+
+/* Shared design tokens for the D3 visualisations — 温暖小清新 (warm & fresh). */
 @theme {
-  --color-qs: #2563eb;
-  --color-qs-soft: #93c5fd;
-  --color-usnews: #dc2626;
-  --color-usnews-soft: #fca5a5;
-  --color-ink: #0f172a;
-  --color-muted: #64748b;
-  --color-surface: #ffffff;
-  --color-surface-2: #f8fafc;
-  --color-line: #e2e8f0;
-  --font-sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --color-qs: #4f8fb0;          /* dusty blue */
+  --color-qs-soft: #c5dce8;
+  --color-usnews: #e0795b;      /* warm coral */
+  --color-usnews-soft: #f4ccbd;
+  --color-gap: #b7a795;         /* warm taupe for error bars */
+  --color-home: #e0a458;        /* warm amber for the home university */
 }
 
 :root {
-  color-scheme: light dark;
+  --radius: 0.85rem;
+  /* Warm, fresh light theme */
+  --background: oklch(0.985 0.012 78);
+  --foreground: oklch(0.37 0.024 56);
+  --card: oklch(0.997 0.006 85);
+  --card-foreground: oklch(0.37 0.024 56);
+  --popover: oklch(0.997 0.006 85);
+  --popover-foreground: oklch(0.37 0.024 56);
+  --primary: oklch(0.69 0.11 45);
+  --primary-foreground: oklch(0.99 0.01 85);
+  --secondary: oklch(0.95 0.022 75);
+  --secondary-foreground: oklch(0.42 0.03 52);
+  --muted: oklch(0.955 0.016 76);
+  --muted-foreground: oklch(0.58 0.025 58);
+  --accent: oklch(0.93 0.038 62);
+  --accent-foreground: oklch(0.42 0.035 50);
+  --destructive: oklch(0.62 0.17 30);
+  --border: oklch(0.905 0.018 74);
+  --input: oklch(0.905 0.018 74);
+  --ring: oklch(0.69 0.10 48);
+  --chart-1: oklch(0.69 0.11 45);
+  --chart-2: oklch(0.66 0.07 230);
+  --chart-3: oklch(0.74 0.10 130);
+  --chart-4: oklch(0.78 0.10 85);
+  --chart-5: oklch(0.64 0.12 15);
+  --sidebar: oklch(0.972 0.015 76);
+  --sidebar-foreground: oklch(0.37 0.024 56);
+  --sidebar-primary: oklch(0.69 0.11 45);
+  --sidebar-primary-foreground: oklch(0.99 0.01 85);
+  --sidebar-accent: oklch(0.93 0.038 62);
+  --sidebar-accent-foreground: oklch(0.42 0.035 50);
+  --sidebar-border: oklch(0.9 0.02 74);
+  --sidebar-ring: oklch(0.69 0.10 48);
 }
 
 html,
@@ -26,34 +59,89 @@ body,
 
 body {
   margin: 0;
-  font-family: var(--font-sans);
-  background: var(--color-surface-2);
-  color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
 }
 
-@media (prefers-color-scheme: dark) {
-  body {
-    background: #0b1120;
-    color: #e2e8f0;
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: 'Geist Variable', sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+.dark {
+  --background: oklch(0.24 0.012 64);
+  --foreground: oklch(0.94 0.012 78);
+  --card: oklch(0.28 0.014 62);
+  --card-foreground: oklch(0.94 0.012 78);
+  --popover: oklch(0.28 0.014 62);
+  --popover-foreground: oklch(0.94 0.012 78);
+  --primary: oklch(0.72 0.11 48);
+  --primary-foreground: oklch(0.22 0.02 60);
+  --secondary: oklch(0.34 0.02 60);
+  --secondary-foreground: oklch(0.94 0.012 78);
+  --muted: oklch(0.34 0.02 60);
+  --muted-foreground: oklch(0.74 0.02 72);
+  --accent: oklch(0.36 0.03 58);
+  --accent-foreground: oklch(0.94 0.012 78);
+  --destructive: oklch(0.66 0.16 30);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.72 0.10 48);
+  --sidebar: oklch(0.28 0.014 62);
+  --sidebar-foreground: oklch(0.94 0.012 78);
+  --sidebar-primary: oklch(0.72 0.11 48);
+  --sidebar-primary-foreground: oklch(0.22 0.02 60);
+  --sidebar-accent: oklch(0.36 0.03 58);
+  --sidebar-accent-foreground: oklch(0.94 0.012 78);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.72 0.10 48);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-/* Modal backdrop (native <dialog>). */
-dialog::backdrop {
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(3px);
-}
-
-dialog {
-  border: none;
-  padding: 0;
-  background: transparent;
-}
-
-/* Centre the modal in the viewport (some resets clobber the UA margins). */
-dialog[open] {
-  position: fixed;
-  inset: 0;
-  margin: auto;
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }
