@@ -1,85 +1,92 @@
 import { useMemo, useState } from 'react'
 import { useUniversities } from './data/useUniversities'
+import Sidebar from './components/Sidebar'
 import Timeline from './components/Timeline'
 import TrendModal from './components/TrendModal'
+import type { SystemKey } from './types'
 
 export default function App() {
   const { meta, all, visibleCount, hasMore, loading, error, loadMore } = useUniversities()
   const [year, setYear] = useState<number | null>(null)
+  const [search, setSearch] = useState('')
+  const [systems, setSystems] = useState<SystemKey[]>(['qs', 'usnews'])
+  const [showList, setShowList] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const activeYear = year ?? (meta ? meta.years[meta.years.length - 1] : 2026)
 
-  // Sort by the better of the two ranks for the active year so the strongest
-  // universities sit at the left end; reveal only the first `visibleCount`.
+  // Filter by the search box, then sort by the better of the two ranks for the
+  // active year so the strongest universities sit at the left end.
   const sorted = useMemo(() => {
     const y = String(activeYear)
+    const q = search.trim().toLowerCase()
     const rankOf = (u: (typeof all)[number]) => {
       const ranks = [u.rankings.qs[y], u.rankings.usnews[y]].filter((r): r is number => r != null)
       return ranks.length ? Math.min(...ranks) : Number.POSITIVE_INFINITY
     }
-    return [...all].sort((a, b) => rankOf(a) - rankOf(b))
-  }, [all, activeYear])
+    return [...all]
+      .filter((u) => !q || u.name.toLowerCase().includes(q) || u.country.toLowerCase().includes(q))
+      .sort((a, b) => rankOf(a) - rankOf(b))
+  }, [all, activeYear, search])
 
   const visible = sorted.slice(0, visibleCount)
   const selected = all.find((u) => u.id === selectedId) ?? null
 
+  const toggleSystem = (s: SystemKey) =>
+    setSystems((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]))
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">University Rankings Timeline</h1>
-        <p className="mt-1 text-slate-500">
-          QS World University Rankings vs US News Best Global Universities. Click any university to see its
-          trend.
-        </p>
-      </header>
-
-      {loading && <p className="text-slate-500">Loading rankings…</p>}
-      {error && <p className="text-red-600">Could not load data: {error}</p>}
-
+    <div className="flex h-screen overflow-hidden">
       {meta && !loading && (
-        <>
-          <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
-            <label htmlFor="year" className="text-sm font-medium text-slate-600 dark:text-slate-300">
-              Year
-            </label>
-            <input
-              id="year"
-              type="range"
-              min={meta.years[0]}
-              max={meta.years[meta.years.length - 1]}
-              step={1}
-              value={activeYear}
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="flex-1 accent-blue-600"
-            />
-            <span className="w-14 text-right text-lg font-semibold tabular-nums">{activeYear}</span>
-          </div>
-
-          <Timeline
-            universities={visible}
-            year={activeYear}
-            systemLabels={meta.systemLabels}
-            defaultId={meta.defaultUniversity}
-            hasMore={hasMore}
-            onLoadMore={loadMore}
-            onSelect={setSelectedId}
-          />
-
-          <p className="mt-3 text-center text-sm text-slate-400">
-            Showing {visible.length} of {all.length} universities ·{' '}
-            <button onClick={() => setSelectedId(meta.defaultUniversity)} className="text-blue-600 underline">
-              View {all.find((u) => u.id === meta.defaultUniversity)?.shortName} trend
-            </button>
-          </p>
-
-          <TrendModal university={selected} meta={meta} onClose={() => setSelectedId(null)} />
-        </>
+        <Sidebar
+          meta={meta}
+          universities={all}
+          year={activeYear}
+          onYearChange={setYear}
+          search={search}
+          onSearchChange={setSearch}
+          systems={systems}
+          onToggleSystem={toggleSystem}
+          showList={showList}
+          onToggleList={() => setShowList((v) => !v)}
+          onSelect={setSelectedId}
+          defaultId={meta.defaultUniversity}
+        />
       )}
 
-      <footer className="mt-10 text-center text-xs text-slate-400">
-        Rank data compiled from public QS &amp; US News sources — see Notes/data-sourcing.md for provenance.
-      </footer>
+      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto p-6">
+        <header className="mb-5">
+          <h1 className="text-2xl font-bold tracking-tight">
+            Overall ranking · <span className="tabular-nums">{activeYear}</span>
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            QS World University Rankings vs US News Best Global Universities. Hover a logo for details and
+            links; click to see its trend over the years.
+          </p>
+        </header>
+
+        {loading && <p className="text-slate-500">Loading rankings…</p>}
+        {error && <p className="text-red-600">Could not load data: {error}</p>}
+
+        {meta && !loading && (
+          <>
+            <Timeline
+              universities={visible}
+              year={activeYear}
+              systems={systems}
+              systemLabels={meta.systemLabels}
+              defaultId={meta.defaultUniversity}
+              hasMore={hasMore}
+              onLoadMore={loadMore}
+              onSelect={setSelectedId}
+            />
+            <p className="mt-3 text-sm text-slate-400">
+              Showing {visible.length} of {all.length} universities.
+            </p>
+            <TrendModal university={selected} meta={meta} onClose={() => setSelectedId(null)} />
+          </>
+        )}
+      </main>
     </div>
   )
 }

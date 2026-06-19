@@ -8,6 +8,12 @@ export interface University {
   name: string
   shortName: string
   country: string
+  /** Primary web domain — used to resolve a logo. */
+  domain: string
+  /** Link to the university's QS profile page. */
+  qsUrl: string
+  /** Link to the university's US News Best Global Universities profile page. */
+  usnewsUrl: string
   rankings: Record<SystemKey, RankByYear>
 }
 

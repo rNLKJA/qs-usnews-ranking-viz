@@ -96,7 +96,7 @@ export default function TrendModal({ university, meta, onClose }: TrendModalProp
       ref={dialogRef}
       onClose={onClose}
       aria-labelledby="trend-title"
-      className="w-[92vw] max-w-3xl rounded-2xl bg-white text-slate-900 shadow-2xl dark:bg-slate-900 dark:text-slate-100"
+      className="max-h-[90vh] w-[92vw] max-w-3xl overflow-auto rounded-2xl bg-white text-slate-900 shadow-2xl dark:bg-slate-900 dark:text-slate-100"
     >
       {university && series && (
         <div className="p-6">
