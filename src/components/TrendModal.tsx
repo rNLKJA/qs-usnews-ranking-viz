@@ -48,10 +48,12 @@ export default function TrendModal({ university, meta, onClose }: TrendModalProp
     return { lo: d3min(all) ?? 1, hi: d3max(all) ?? 50 }
   }, [university, years])
 
-  const x = useMemo(
-    () => scaleLinear().domain([years[0], years[years.length - 1]]).range([M.left, W - M.right]),
-    [years],
-  )
+  const x = useMemo(() => {
+    const lo = years[0]
+    const hi = years[years.length - 1]
+    const domain = lo === hi ? [lo - 1, hi + 1] : [lo, hi] // centre a single year
+    return scaleLinear().domain(domain).range([M.left, W - M.right])
+  }, [years])
   const y = useMemo(() => {
     const lo = bounds?.lo ?? 1
     const hi = bounds?.hi ?? 50
@@ -70,7 +72,8 @@ export default function TrendModal({ university, meta, onClose }: TrendModalProp
                 <div className="text-left">
                   <DialogTitle className="text-lg font-medium tracking-tight">{university.name}</DialogTitle>
                   <DialogDescription className="text-[11px] uppercase tracking-widest">
-                    {university.country} · {years[0]}–{years[years.length - 1]}
+                    {[university.city, university.country].filter(Boolean).join(' · ')}
+                    {years.length > 1 ? ` · ${years[0]}–${years[years.length - 1]}` : ` · ${years[0]} edition`}
                   </DialogDescription>
                 </div>
               </div>
@@ -162,6 +165,12 @@ export default function TrendModal({ university, meta, onClose }: TrendModalProp
                 }),
               )}
             </svg>
+
+            {university.description && (
+              <p className="max-h-28 overflow-y-auto text-sm font-light leading-relaxed text-muted-foreground">
+                {university.description}
+              </p>
+            )}
 
             {/* Source links — outlined, invert on hover (Nothing) */}
             <div className="flex flex-wrap gap-3">

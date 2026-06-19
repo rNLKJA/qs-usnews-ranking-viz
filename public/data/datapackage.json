@@ -1,0 +1,115 @@
+{
+  "name": "world-university-rankings",
+  "title": "World University Rankings — QS & U.S. News",
+  "description": "QS (1504) and U.S. News (2250) 2026 editions; 993 matched across both. Current edition only — the live APIs do not expose historical years.",
+  "version": "2026.1",
+  "licenses": [
+    {
+      "name": "CC-BY-4.0",
+      "path": "https://creativecommons.org/licenses/by/4.0/",
+      "title": "Creative Commons Attribution 4.0"
+    }
+  ],
+  "homepage": "https://github.com/rNLKJA/qs-usnews-ranking-viz",
+  "sources": [
+    {
+      "title": "QS World University Rankings",
+      "path": "https://www.topuniversities.com/world-university-rankings"
+    },
+    {
+      "title": "U.S. News Best Global Universities",
+      "path": "https://www.usnews.com/education/best-global-universities/rankings"
+    }
+  ],
+  "resources": [
+    {
+      "name": "universities",
+      "path": "universities.csv",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "schema": {
+        "primaryKey": "id",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "description": "Stable identifier (QS profile slug, or usn-<slug>)"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "region",
+            "type": "string"
+          },
+          {
+            "name": "city",
+            "type": "string",
+            "title": "Location"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "qs_url",
+            "type": "string",
+            "format": "uri"
+          },
+          {
+            "name": "usnews_url",
+            "type": "string",
+            "format": "uri"
+          }
+        ]
+      }
+    },
+    {
+      "name": "rankings",
+      "path": "rankings.csv",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "schema": {
+        "foreignKeys": [
+          {
+            "fields": "university_id",
+            "reference": {
+              "resource": "universities",
+              "fields": "id"
+            }
+          }
+        ],
+        "fields": [
+          {
+            "name": "university_id",
+            "type": "string"
+          },
+          {
+            "name": "system",
+            "type": "string",
+            "constraints": {
+              "enum": [
+                "qs",
+                "usnews"
+              ]
+            }
+          },
+          {
+            "name": "year",
+            "type": "integer"
+          },
+          {
+            "name": "rank",
+            "type": "integer",
+            "description": "World rank (lower is better)"
+          }
+        ]
+      }
+    }
+  ]
+}

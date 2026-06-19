@@ -7,15 +7,14 @@ import type { SystemKey } from '@/types'
 
 export default function App() {
   const { meta, all, loading, error } = useUniversities()
-  const [year, setYear] = useState<number | null>(null)
   const [search, setSearch] = useState('')
   const [systems, setSystems] = useState<SystemKey[]>(['qs', 'usnews'])
   const [showList, setShowList] = useState(true)
+  const [spacing, setSpacing] = useState(150)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  // Locate request from the sidebar — scrolls the timeline to a university.
   const [locate, setLocate] = useState<{ id: string; nonce: number } | null>(null)
 
-  const activeYear = year ?? (meta ? meta.years[meta.years.length - 1] : 2026)
+  const activeYear = meta ? meta.years[meta.years.length - 1] : 2026
 
   const sorted = useMemo(() => {
     const y = String(activeYear)
@@ -25,31 +24,35 @@ export default function App() {
       return ranks.length ? Math.min(...ranks) : Number.POSITIVE_INFINITY
     }
     return [...all]
-      .filter((u) => !q || u.name.toLowerCase().includes(q) || u.country.toLowerCase().includes(q))
+      .filter(
+        (u) =>
+          !q ||
+          u.name.toLowerCase().includes(q) ||
+          u.country.toLowerCase().includes(q) ||
+          (u.city ?? '').toLowerCase().includes(q),
+      )
       .sort((a, b) => rankOf(a) - rankOf(b))
   }, [all, activeYear, search])
 
   const selected = all.find((u) => u.id === selectedId) ?? null
-
   const toggleSystem = (s: SystemKey) =>
     setSystems((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]))
-
   const locateUni = (id: string) => setLocate((p) => ({ id, nonce: (p?.nonce ?? 0) + 1 }))
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {meta && !loading && (
         <Sidebar
-          meta={meta}
           universities={all}
           year={activeYear}
-          onYearChange={setYear}
           search={search}
           onSearchChange={setSearch}
           systems={systems}
           onToggleSystem={toggleSystem}
           showList={showList}
           onToggleList={() => setShowList((v) => !v)}
+          spacing={spacing}
+          onSpacingChange={setSpacing}
           onLocate={locateUni}
         />
       )}
@@ -57,19 +60,19 @@ export default function App() {
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto px-8 py-10 md:px-14 md:py-12">
         <header className="mb-10 max-w-3xl">
           <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
-            QS × US News · 2004–2026
+            QS × U.S. News · {activeYear} edition
           </p>
           <h1 className="mt-2 font-display text-4xl font-light tracking-tight md:text-5xl">
-            Overall ranking<span className="text-muted-foreground"> · {activeYear}</span>
+            Ranking Radar<span className="text-muted-foreground"> · {activeYear}</span>
           </h1>
           <p className="mt-3 text-lg font-light leading-relaxed">
-            See how far your university’s ranking slipped this year —{' '}
-            <span className="text-[#ff3c3c]">did your school pay to win again?</span>
+            How does your university rank — and how far do the two systems disagree?{' '}
+            <span className="text-[#ff3c3c]">Two takes, side by side.</span>
           </p>
           <p className="mt-2 text-sm font-light leading-relaxed text-muted-foreground">
-            QS World University Rankings vs US News Best Global Universities. Pick a university from the list to
-            find it on the timeline, then hover or click its logo to see its rank trend over the years. Lower is
-            better.
+            QS World University Rankings vs U.S. News Best Global Universities. Pick a university from the list
+            to find it on the timeline, then hover or click its logo for details and the cross-system gap.
+            Lower is better.
           </p>
         </header>
 
@@ -83,11 +86,13 @@ export default function App() {
               year={activeYear}
               systems={systems}
               systemLabels={meta.systemLabels}
+              pxPerRank={spacing}
               locate={locate}
               onSelect={setSelectedId}
             />
             <p className="mt-3 text-[11px] uppercase tracking-widest text-muted-foreground">
-              {sorted.length} universities · QS from 2004 · US News Best Global from 2015
+              {sorted.length} universities · QS {all.filter((u) => u.rankings.qs[String(activeYear)] != null).length}{' '}
+              · U.S. News {all.filter((u) => u.rankings.usnews[String(activeYear)] != null).length}
             </p>
             <TrendModal university={selected} meta={meta} onClose={() => setSelectedId(null)} />
           </>

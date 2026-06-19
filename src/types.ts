@@ -6,8 +6,14 @@ export type RankByYear = Record<string, number | null>
 export interface University {
   id: string
   name: string
-  shortName: string
+  shortName?: string
   country: string
+  /** Macro region (e.g. "Oceania", "North America"). */
+  region?: string
+  /** City / location. */
+  city?: string
+  /** Short prose description of the university. */
+  description?: string
   /** Optional web domain — used to resolve a favicon when no logo is given. */
   domain?: string
   /** Logo image URL (from QS) — overrides the favicon. */

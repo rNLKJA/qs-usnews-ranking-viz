@@ -11,6 +11,8 @@ interface TimelineProps {
   year: number
   systems: SystemKey[]
   systemLabels: Record<SystemKey, string>
+  /** Horizontal pixels per rank — user-controlled spacing. */
+  pxPerRank: number
   /** A request to scroll to + highlight a university (from the sidebar). */
   locate: { id: string; nonce: number } | null
   onSelect: (id: string) => void
@@ -24,7 +26,6 @@ const SYSTEM_COLOR: Record<SystemKey, string> = {
 const SYSTEM_SHORT: Record<SystemKey, string> = { qs: 'QS', usnews: 'U.S. News' }
 
 const MARGIN = { left: 200, right: 160 }
-const PX_PER_RANK = 116
 const MIN_WIDTH = 900
 const HEIGHT = 540
 const LANE_Y: Record<SystemKey, number> = { qs: 170, usnews: 400 }
@@ -38,7 +39,7 @@ const REVEAL_BUFFER = 240
  * hovering opens a card with details and ranking-page links. Reveal is
  * position-aware — universities stream in as their rank scrolls into view.
  */
-export default function Timeline({ universities, year, systems, systemLabels, locate, onSelect }: TimelineProps) {
+export default function Timeline({ universities, year, systems, systemLabels, pxPerRank, locate, onSelect }: TimelineProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const [revealRank, setRevealRank] = useState(60)
   const [highlightId, setHighlightId] = useState<string | null>(null)
@@ -65,7 +66,7 @@ export default function Timeline({ universities, year, systems, systemLabels, lo
     return { laid, maxRank: max }
   }, [universities, year])
 
-  const chartWidth = Math.max(MIN_WIDTH, MARGIN.left + maxRank * PX_PER_RANK + MARGIN.right)
+  const chartWidth = Math.max(MIN_WIDTH, MARGIN.left + maxRank * pxPerRank + MARGIN.right)
   const x = useMemo(
     () => scaleLinear().domain([1, maxRank]).range([MARGIN.left, chartWidth - MARGIN.right]),
     [maxRank, chartWidth],
@@ -192,7 +193,9 @@ export default function Timeline({ universities, year, systems, systemLabels, lo
                           <UniversityLogo university={uni} size={40} />
                           <div className="min-w-0">
                             <p className="truncate text-sm font-medium text-foreground">{uni.name}</p>
-                            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">{uni.country}</p>
+                            <p className="truncate text-[11px] uppercase tracking-widest text-muted-foreground">
+                              {[uni.city, uni.country].filter(Boolean).join(' · ')}
+                            </p>
                           </div>
                         </div>
                         <Separator className="my-3" />
