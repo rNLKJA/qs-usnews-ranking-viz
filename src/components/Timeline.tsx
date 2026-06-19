@@ -11,6 +11,8 @@ interface TimelineProps {
   year: number
   systems: SystemKey[]
   systemLabels: Record<SystemKey, string>
+  /** A request to scroll to + highlight a university (from the sidebar). */
+  locate: { id: string; nonce: number } | null
   onSelect: (id: string) => void
 }
 
@@ -36,9 +38,10 @@ const REVEAL_BUFFER = 240
  * hovering opens a card with details and ranking-page links. Reveal is
  * position-aware — universities stream in as their rank scrolls into view.
  */
-export default function Timeline({ universities, year, systems, systemLabels, onSelect }: TimelineProps) {
+export default function Timeline({ universities, year, systems, systemLabels, locate, onSelect }: TimelineProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const [revealRank, setRevealRank] = useState(60)
+  const [highlightId, setHighlightId] = useState<string | null>(null)
   const activeSystems = ALL_SYSTEMS.filter((s) => systems.includes(s))
 
   const { laid, maxRank } = useMemo(() => {
@@ -81,6 +84,24 @@ export default function Timeline({ universities, year, systems, systemLabels, on
       ro.disconnect()
     }
   }, [x, year, systems])
+
+  // Sidebar locate: reveal the university, scroll it into view, and flag it.
+  useEffect(() => {
+    if (!locate) return
+    const el = scrollRef.current
+    const uni = universities.find((u) => u.id === locate.id)
+    if (!el || !uni) return
+    const ranks = activeSystems
+      .map((s) => uni.rankings[s][String(year)])
+      .filter((r): r is number => r != null)
+    if (!ranks.length) return
+    setRevealRank((prev) => Math.max(prev, Math.max(...ranks)))
+    el.scrollTo({ left: Math.max(0, x(Math.min(...ranks)) - el.clientWidth / 2), behavior: 'smooth' })
+    setHighlightId(locate.id)
+    const t = setTimeout(() => setHighlightId(null), 2800)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locate?.nonce])
 
   const ticks = useMemo(() => {
     const t = [1]
@@ -142,7 +163,9 @@ export default function Timeline({ universities, year, systems, systemLabels, on
                         <button
                           type="button"
                           onClick={() => onSelect(uni.id)}
-                          className="absolute flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 p-1.5 text-center transition-colors duration-200 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className={`absolute flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 p-1.5 text-center transition-colors duration-200 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                            uni.id === highlightId ? 'bg-accent ring-2 ring-foreground' : ''
+                          }`}
                           aria-label={`${uni.name}, ${systemLabels[system]} rank ${rank} in ${year}`}
                         >
                           <span className="relative">

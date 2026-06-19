@@ -23,7 +23,8 @@ interface SidebarProps {
   onToggleSystem: (s: SystemKey) => void
   showList: boolean
   onToggleList: () => void
-  onSelect: (id: string) => void
+  /** Locate the university on the timeline (does not open the trend modal). */
+  onLocate: (id: string) => void
 }
 
 const SYSTEM_COLOR: Record<SystemKey, string> = {
@@ -42,7 +43,7 @@ export default function Sidebar({
   onToggleSystem,
   showList,
   onToggleList,
-  onSelect,
+  onLocate,
 }: SidebarProps) {
   const y = String(year)
 
@@ -61,12 +62,12 @@ export default function Sidebar({
     <aside className="flex h-full w-72 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
       {/* Logo & site name */}
       <div className="flex items-center gap-3 p-5">
-        <div className="flex size-11 items-center justify-center bg-foreground p-2" style={{ borderRadius: '22%' }}>
-          <img src="/brand-logo.svg" alt="Ranking Radar logo" className="size-full object-contain" />
+        <div className="flex size-11 items-center justify-center border border-border bg-white p-2" style={{ borderRadius: '22%' }}>
+          <img src="/brand-logo.svg" alt="Ranking Radar logo" className="size-full object-contain [filter:invert(1)]" />
         </div>
         <div className="leading-tight">
-          <p className="font-display text-lg font-light tracking-tight">排名雷达</p>
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Ranking Radar</p>
+          <p className="font-display text-lg font-light tracking-tight">Ranking Radar</p>
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">QS · US News · 2004–2026</p>
         </div>
       </div>
 
@@ -139,7 +140,8 @@ export default function Sidebar({
                 {list.map((u) => (
                   <li key={u.id}>
                     <button
-                      onClick={() => onSelect(u.id)}
+                      onClick={() => onLocate(u.id)}
+                      title="Find on the timeline"
                       className="flex w-full items-center gap-3 px-2 py-2 text-left transition-colors duration-200 hover:bg-accent"
                     >
                       <UniversityLogo university={u} size={32} />

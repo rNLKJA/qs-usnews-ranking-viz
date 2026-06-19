@@ -12,6 +12,8 @@ export default function App() {
   const [systems, setSystems] = useState<SystemKey[]>(['qs', 'usnews'])
   const [showList, setShowList] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Locate request from the sidebar — scrolls the timeline to a university.
+  const [locate, setLocate] = useState<{ id: string; nonce: number } | null>(null)
 
   const activeYear = year ?? (meta ? meta.years[meta.years.length - 1] : 2026)
 
@@ -32,6 +34,8 @@ export default function App() {
   const toggleSystem = (s: SystemKey) =>
     setSystems((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]))
 
+  const locateUni = (id: string) => setLocate((p) => ({ id, nonce: (p?.nonce ?? 0) + 1 }))
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {meta && !loading && (
@@ -46,7 +50,7 @@ export default function App() {
           onToggleSystem={toggleSystem}
           showList={showList}
           onToggleList={() => setShowList((v) => !v)}
-          onSelect={setSelectedId}
+          onLocate={locateUni}
         />
       )}
 
@@ -56,15 +60,16 @@ export default function App() {
             QS × US News · 2004–2026
           </p>
           <h1 className="mt-2 font-display text-4xl font-light tracking-tight md:text-5xl">
-            排名雷达<span className="text-muted-foreground"> · {activeYear}</span>
+            Overall ranking<span className="text-muted-foreground"> · {activeYear}</span>
           </h1>
           <p className="mt-3 text-lg font-light leading-relaxed">
-            来看看你大学排名掉了多少 —{' '}
-            <span className="text-[#ff3c3c]">你学校今天又充钱了吗？</span>
+            See how far your university’s ranking slipped this year —{' '}
+            <span className="text-[#ff3c3c]">did your school pay to win again?</span>
           </p>
           <p className="mt-2 text-sm font-light leading-relaxed text-muted-foreground">
-            QS World University Rankings vs US News Best Global Universities. Hover a logo for details and
-            links; click to see its rank trend over the years. Lower is better.
+            QS World University Rankings vs US News Best Global Universities. Pick a university from the list to
+            find it on the timeline, then hover or click its logo to see its rank trend over the years. Lower is
+            better.
           </p>
         </header>
 
@@ -78,6 +83,7 @@ export default function App() {
               year={activeYear}
               systems={systems}
               systemLabels={meta.systemLabels}
+              locate={locate}
               onSelect={setSelectedId}
             />
             <p className="mt-3 text-[11px] uppercase tracking-widest text-muted-foreground">
