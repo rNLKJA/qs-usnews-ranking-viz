@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Search, Star } from 'lucide-react'
+import { FiSearch, FiGithub, FiCoffee } from 'react-icons/fi'
 import type { DatasetMeta, SystemKey, University } from '@/types'
 import UniversityLogo from './UniversityLogo'
 import { Input } from '@/components/ui/input'
@@ -8,6 +8,9 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
+
+const GITHUB_URL = 'https://github.com/rNLKJA/qs-usnews-ranking-viz'
+const COFFEE_URL = 'https://buymeacoffee.com/rnlkja'
 
 interface SidebarProps {
   meta: DatasetMeta
@@ -21,7 +24,6 @@ interface SidebarProps {
   showList: boolean
   onToggleList: () => void
   onSelect: (id: string) => void
-  defaultId: string
 }
 
 const SYSTEM_COLOR: Record<SystemKey, string> = {
@@ -41,7 +43,6 @@ export default function Sidebar({
   showList,
   onToggleList,
   onSelect,
-  defaultId,
 }: SidebarProps) {
   const y = String(year)
 
@@ -57,27 +58,28 @@ export default function Sidebar({
   }, [universities, search, y])
 
   return (
-    <aside className="flex h-full w-72 shrink-0 flex-col bg-sidebar text-sidebar-foreground">
+    <aside className="flex h-full w-72 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
       {/* Logo & site name */}
       <div className="flex items-center gap-3 p-5">
-        <div className="flex size-11 items-center justify-center rounded-2xl bg-primary p-2 shadow-sm">
-          <img src="/brand-logo.svg" alt="Site logo" className="size-full object-contain" />
+        <div className="flex size-11 items-center justify-center bg-foreground p-2" style={{ borderRadius: '22%' }}>
+          <img src="/brand-logo.svg" alt="Ranking Radar logo" className="size-full object-contain" />
         </div>
         <div className="leading-tight">
-          <p className="text-base font-semibold tracking-tight">Ranking Radar</p>
-          <p className="text-xs text-muted-foreground">QS · US News, side by side</p>
+          <p className="font-display text-lg font-light tracking-tight">排名雷达</p>
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Ranking Radar</p>
         </div>
       </div>
 
+      {/* Search */}
       <div className="px-4">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <FiSearch className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search a university…"
-            className="rounded-xl bg-card pl-9"
+            className="rounded-none border-border bg-card pl-9"
           />
         </div>
       </div>
@@ -85,11 +87,9 @@ export default function Sidebar({
       {/* Filters */}
       <div className="space-y-4 p-4">
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+          <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-muted-foreground">
             <span>Year</span>
-            <span className="rounded-md bg-accent px-1.5 py-0.5 font-semibold tabular-nums text-accent-foreground">
-              {year}
-            </span>
+            <span className="font-medium tabular-nums text-foreground">{year}</span>
           </div>
           <Slider
             min={meta.years[0]}
@@ -108,17 +108,11 @@ export default function Sidebar({
                 key={s}
                 onClick={() => onToggleSystem(s)}
                 aria-pressed={on}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border px-2 py-2 text-xs font-medium transition"
-                style={{
-                  borderColor: SYSTEM_COLOR[s],
-                  background: on ? SYSTEM_COLOR[s] : 'transparent',
-                  color: on ? 'white' : SYSTEM_COLOR[s],
-                }}
+                className={`flex flex-1 items-center justify-center gap-2 border px-2 py-2 text-[11px] uppercase tracking-widest transition-colors duration-200 ${
+                  on ? 'border-foreground bg-foreground text-background' : 'border-border text-foreground hover:bg-accent'
+                }`}
               >
-                <span
-                  className="size-2 rounded-full"
-                  style={{ background: on ? 'white' : SYSTEM_COLOR[s] }}
-                />
+                <span className="size-2 rounded-full" style={{ background: SYSTEM_COLOR[s] }} />
                 {s === 'qs' ? 'QS' : 'US News'}
               </button>
             )
@@ -126,7 +120,7 @@ export default function Sidebar({
         </div>
 
         <div className="flex items-center justify-between">
-          <Label htmlFor="show-list" className="text-xs font-medium text-muted-foreground">
+          <Label htmlFor="show-list" className="text-[10px] uppercase tracking-widest text-muted-foreground">
             Show ranked list
           </Label>
           <Switch id="show-list" checked={showList} onCheckedChange={onToggleList} />
@@ -137,26 +131,21 @@ export default function Sidebar({
         <>
           <Separator />
           <div className="flex min-h-0 flex-1 flex-col">
-            <p className="px-5 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="px-5 py-2 text-[10px] uppercase tracking-widest text-muted-foreground">
               {year} ranking · {list.length}
             </p>
             <ScrollArea className="min-h-0 flex-1 px-2 pb-2">
-              <ul className="space-y-1">
+              <ul>
                 {list.map((u) => (
                   <li key={u.id}>
                     <button
                       onClick={() => onSelect(u.id)}
-                      className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-accent/70"
+                      className="flex w-full items-center gap-3 px-2 py-2 text-left transition-colors duration-200 hover:bg-accent"
                     >
                       <UniversityLogo university={u} size={32} />
                       <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-1 text-sm font-medium text-foreground">
-                          <span className="truncate">{u.name}</span>
-                          {u.id === defaultId && (
-                            <Star className="size-3 shrink-0 fill-[var(--color-home)] stroke-[var(--color-home)]" />
-                          )}
-                        </span>
-                        <span className="flex gap-2 text-[11px]">
+                        <span className="block truncate text-sm font-medium text-foreground">{u.name}</span>
+                        <span className="flex gap-2 text-[10px] uppercase tracking-widest">
                           <span style={{ color: SYSTEM_COLOR.qs }}>QS {fmt(u.rankings.qs[y])}</span>
                           <span style={{ color: SYSTEM_COLOR.usnews }}>USN {fmt(u.rankings.usnews[y])}</span>
                         </span>
@@ -172,6 +161,27 @@ export default function Sidebar({
           </div>
         </>
       )}
+
+      {/* Footer — open source + support */}
+      <Separator />
+      <div className="flex items-center gap-2 p-3">
+        <a
+          href={GITHUB_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex flex-1 items-center justify-center gap-1.5 border border-border px-2 py-2 text-[10px] uppercase tracking-widest transition-colors duration-200 hover:bg-foreground hover:text-background"
+        >
+          <FiGithub className="size-3.5" /> GitHub
+        </a>
+        <a
+          href={COFFEE_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex flex-1 items-center justify-center gap-1.5 border border-[#ff3c3c] px-2 py-2 text-[10px] uppercase tracking-widest text-[#ff3c3c] transition-colors duration-200 hover:bg-[#ff3c3c] hover:text-white"
+        >
+          <FiCoffee className="size-3.5" /> Coffee
+        </a>
+      </div>
     </aside>
   )
 }

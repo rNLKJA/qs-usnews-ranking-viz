@@ -9,9 +9,9 @@ interface UniversityLogoProps {
 }
 
 /**
- * University logo as a shadcn Avatar. Uses an explicit logo when provided,
- * otherwise the domain favicon, and falls back to a warm monogram so a missing
- * image never shows as a broken square.
+ * University logo as an iOS-style squircle (Nothing OS spec: square,
+ * border-radius 22%). Uses an explicit logo when provided, otherwise the domain
+ * favicon, falling back to a monogram.
  */
 export default function UniversityLogo({ university, size = 46, className }: UniversityLogoProps) {
   const src =
@@ -20,13 +20,13 @@ export default function UniversityLogo({ university, size = 46, className }: Uni
 
   return (
     <Avatar
-      className={cn('rounded-xl border border-border bg-white shadow-sm', className)}
-      style={{ width: size, height: size }}
+      className={cn('border border-border bg-white', className)}
+      style={{ width: size, height: size, borderRadius: '22%' }}
     >
       <AvatarImage src={src} alt={`${university.name} logo`} className="object-contain p-1.5" />
       <AvatarFallback
-        className="rounded-xl bg-secondary font-semibold text-secondary-foreground"
-        style={{ fontSize: size * 0.3 }}
+        className="bg-white font-medium text-foreground"
+        style={{ fontSize: size * 0.28, borderRadius: '22%' }}
       >
         {initials}
       </AvatarFallback>

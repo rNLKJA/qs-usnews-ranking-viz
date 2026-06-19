@@ -47,23 +47,29 @@ export default function App() {
           showList={showList}
           onToggleList={() => setShowList((v) => !v)}
           onSelect={setSelectedId}
-          defaultId={meta.defaultUniversity}
         />
       )}
 
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto p-6 sm:p-8">
-        <header className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Overall ranking · <span className="tabular-nums text-primary">{activeYear}</span>
+      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto px-6 py-8 md:px-10">
+        <header className="mb-7 max-w-3xl">
+          <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
+            QS × US News · 2004–2026
+          </p>
+          <h1 className="mt-2 font-display text-4xl font-light tracking-tight md:text-5xl">
+            排名雷达<span className="text-muted-foreground"> · {activeYear}</span>
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+          <p className="mt-3 text-lg font-light leading-relaxed">
+            来看看你大学排名掉了多少 —{' '}
+            <span className="text-[#ff3c3c]">你学校今天又充钱了吗？</span>
+          </p>
+          <p className="mt-2 text-sm font-light leading-relaxed text-muted-foreground">
             QS World University Rankings vs US News Best Global Universities. Hover a logo for details and
-            links; click to see its trend over the years.
+            links; click to see its rank trend over the years. Lower is better.
           </p>
         </header>
 
         {loading && <p className="text-muted-foreground">Loading rankings…</p>}
-        {error && <p className="text-destructive">Could not load data: {error}</p>}
+        {error && <p className="text-[#ff3c3c]">Could not load data: {error}</p>}
 
         {meta && !loading && (
           <>
@@ -72,11 +78,10 @@ export default function App() {
               year={activeYear}
               systems={systems}
               systemLabels={meta.systemLabels}
-              defaultId={meta.defaultUniversity}
               onSelect={setSelectedId}
             />
-            <p className="mt-3 text-sm text-muted-foreground">
-              {sorted.length} universities · QS from 2004, US News Best Global from 2015.
+            <p className="mt-3 text-[11px] uppercase tracking-widest text-muted-foreground">
+              {sorted.length} universities · QS from 2004 · US News Best Global from 2015
             </p>
             <TrendModal university={selected} meta={meta} onClose={() => setSelectedId(null)} />
           </>
