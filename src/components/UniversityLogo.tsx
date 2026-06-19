@@ -9,8 +9,8 @@ interface UniversityLogoProps {
 }
 
 /**
- * University logo as a square with rounded corners. Prefers the QS logo URL,
- * falls back to the domain favicon, then to a monogram.
+ * University logo as a borderless square with rounded corners. Prefers the QS
+ * logo URL, falls back to the domain favicon, then to a monogram.
  */
 export default function UniversityLogo({ university, size = 46, className }: UniversityLogoProps) {
   const src =
@@ -19,20 +19,17 @@ export default function UniversityLogo({ university, size = 46, className }: Uni
   const initials = university.shortName.slice(0, 3).toUpperCase()
 
   return (
-    <Avatar
-      className={cn('border border-border bg-white', className)}
-      style={{ width: size, height: size, borderRadius: '20%' }}
-    >
+    <Avatar className={cn(className)} style={{ width: size, height: size, borderRadius: '20%' }}>
       {src && (
         <AvatarImage
           src={src}
           alt={`${university.name} logo`}
           referrerPolicy="no-referrer"
-          className="object-contain p-1"
+          className="object-contain"
         />
       )}
       <AvatarFallback
-        className="bg-white font-medium text-foreground"
+        className="bg-muted font-medium text-foreground"
         style={{ fontSize: size * 0.28, borderRadius: '20%' }}
       >
         {initials}
