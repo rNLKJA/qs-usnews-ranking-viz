@@ -6,7 +6,7 @@ import TrendModal from '@/components/TrendModal'
 import type { SystemKey } from '@/types'
 
 export default function App() {
-  const { meta, all, visibleCount, hasMore, loading, error, loadMore } = useUniversities()
+  const { meta, all, loading, error } = useUniversities()
   const [year, setYear] = useState<number | null>(null)
   const [search, setSearch] = useState('')
   const [systems, setSystems] = useState<SystemKey[]>(['qs', 'usnews'])
@@ -27,7 +27,6 @@ export default function App() {
       .sort((a, b) => rankOf(a) - rankOf(b))
   }, [all, activeYear, search])
 
-  const visible = sorted.slice(0, visibleCount)
   const selected = all.find((u) => u.id === selectedId) ?? null
 
   const toggleSystem = (s: SystemKey) =>
@@ -69,17 +68,15 @@ export default function App() {
         {meta && !loading && (
           <>
             <Timeline
-              universities={visible}
+              universities={sorted}
               year={activeYear}
               systems={systems}
               systemLabels={meta.systemLabels}
               defaultId={meta.defaultUniversity}
-              hasMore={hasMore}
-              onLoadMore={loadMore}
               onSelect={setSelectedId}
             />
             <p className="mt-3 text-sm text-muted-foreground">
-              Showing {visible.length} of {all.length} universities.
+              {sorted.length} universities · QS from 2004, US News Best Global from 2015.
             </p>
             <TrendModal university={selected} meta={meta} onClose={() => setSelectedId(null)} />
           </>

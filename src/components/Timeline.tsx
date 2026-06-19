@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { scaleLinear } from 'd3-scale'
 import { ExternalLink, LineChart, Star } from 'lucide-react'
 import type { SystemKey, University } from '@/types'
@@ -13,8 +13,6 @@ interface TimelineProps {
   systems: SystemKey[]
   systemLabels: Record<SystemKey, string>
   defaultId: string
-  hasMore: boolean
-  onLoadMore: () => void
   onSelect: (id: string) => void
 }
 
@@ -31,13 +29,18 @@ const MIN_WIDTH = 900
 const HEIGHT = 500
 const LANE_Y: Record<SystemKey, number> = { qs: 150, usnews: 360 }
 const STACK_STEP = 96
+const REVEAL_BUFFER = 240
 
 /**
  * Overall view for the selected year: rank 1 at the left end, universities
  * placed along the axis by rank, ties stacked vertically. QS lane on top, US
  * News below. Each university shows as its logo with the full name beneath;
- * hovering opens a card with details and links to its QS / US News pages. No
- * error bars here — those live in the per-university trend modal.
+ * hovering opens a card with details and links. No error bars here — those live
+ * in the per-university trend modal.
+ *
+ * Lazy reveal is position-aware: only universities whose rank has scrolled into
+ * view (plus a buffer) are rendered, so a large field streams in as you scroll
+ * right toward higher ranks rather than all at once.
  */
 export default function Timeline({
   universities,
@@ -45,11 +48,10 @@ export default function Timeline({
   systems,
   systemLabels,
   defaultId,
-  hasMore,
-  onLoadMore,
   onSelect,
 }: TimelineProps) {
-  const sentinelRef = useRef<HTMLDivElement | null>(null)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const [revealRank, setRevealRank] = useState(60)
   const activeSystems = ALL_SYSTEMS.filter((s) => systems.includes(s))
 
   const { laid, maxRank } = useMemo(() => {
@@ -81,24 +83,31 @@ export default function Timeline({
     [maxRank, chartWidth],
   )
 
+  // Reveal more universities as their rank-position scrolls into view.
   useEffect(() => {
-    const el = sentinelRef.current
-    if (!el || !hasMore) return
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) onLoadMore()
-      },
-      { root: el.closest('[data-scroll-root]'), rootMargin: '0px 240px 0px 0px' },
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [hasMore, onLoadMore])
+    const el = scrollRef.current
+    if (!el) return
+    const update = () =>
+      setRevealRank(Math.max(1, Math.ceil(x.invert(el.scrollLeft + el.clientWidth + REVEAL_BUFFER))))
+    update()
+    el.addEventListener('scroll', update, { passive: true })
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => {
+      el.removeEventListener('scroll', update)
+      ro.disconnect()
+    }
+  }, [x, year, systems])
 
   const ticks = useMemo(() => {
     const t = [1]
     for (let r = 5; r <= maxRank; r += 5) t.push(r)
     return t
   }, [maxRank])
+
+  const totalShown = activeSystems.reduce((n, s) => n + laid[s].filter((p) => p.rank <= revealRank).length, 0)
+  const totalAll = activeSystems.reduce((n, s) => n + laid[s].length, 0)
+  const isEmpty = laid.qs.length === 0 && laid.usnews.length === 0
 
   return (
     <div className="relative overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
@@ -112,7 +121,7 @@ export default function Timeline({
         </div>
       ))}
 
-      <div data-scroll-root className="overflow-x-auto overflow-y-hidden">
+      <div ref={scrollRef} className="overflow-x-auto overflow-y-hidden">
         <div className="relative" style={{ width: chartWidth, height: HEIGHT }}>
           <svg width={chartWidth} height={HEIGHT} className="absolute inset-0" aria-hidden>
             {ticks.map((r) => (
@@ -138,103 +147,97 @@ export default function Timeline({
           </svg>
 
           {activeSystems.map((system) =>
-            laid[system].map(({ uni, rank, offset }) => {
-              const cx = x(rank)
-              const cy = LANE_Y[system] - offset * STACK_STEP
-              const isHome = uni.id === defaultId
-              return (
-                <div key={`${system}-${uni.id}`} className="absolute" style={{ left: cx, top: cy }}>
-                  <HoverCard openDelay={100} closeDelay={80}>
-                    <HoverCardTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={() => onSelect(uni.id)}
-                        className="absolute flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 rounded-2xl p-1.5 text-center transition hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        aria-label={`${uni.name}, ${systemLabels[system]} rank ${rank} in ${year}`}
-                      >
-                        <span className="relative">
-                          <UniversityLogo university={uni} size={48} />
-                          <span
-                            className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full px-1.5 py-px text-[10px] font-bold text-white shadow ring-2 ring-card"
-                            style={{ background: SYSTEM_COLOR[system] }}
-                          >
-                            #{rank}
+            laid[system]
+              .filter((p) => p.rank <= revealRank)
+              .map(({ uni, rank, offset }) => {
+                const cx = x(rank)
+                const cy = LANE_Y[system] - offset * STACK_STEP
+                const isHome = uni.id === defaultId
+                return (
+                  <div key={`${system}-${uni.id}`} className="absolute" style={{ left: cx, top: cy }}>
+                    <HoverCard openDelay={100} closeDelay={80}>
+                      <HoverCardTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => onSelect(uni.id)}
+                          className="absolute flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 rounded-2xl p-1.5 text-center transition hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          aria-label={`${uni.name}, ${systemLabels[system]} rank ${rank} in ${year}`}
+                        >
+                          <span className="relative">
+                            <UniversityLogo university={uni} size={48} />
+                            <span
+                              className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full px-1.5 py-px text-[10px] font-bold text-white shadow ring-2 ring-card"
+                              style={{ background: SYSTEM_COLOR[system] }}
+                            >
+                              #{rank}
+                            </span>
+                            {isHome && (
+                              <Star
+                                className="absolute -right-1.5 -top-1.5 size-4 fill-[var(--color-home)] stroke-[var(--color-home)] drop-shadow"
+                                aria-hidden
+                              />
+                            )}
                           </span>
-                          {isHome && (
-                            <Star
-                              className="absolute -right-1.5 -top-1.5 size-4 fill-[var(--color-home)] stroke-[var(--color-home)] drop-shadow"
-                              aria-hidden
-                            />
-                          )}
-                        </span>
-                        <span className="mt-1 line-clamp-2 text-[11px] font-medium leading-tight text-foreground">
-                          {uni.name}
-                        </span>
-                      </button>
-                    </HoverCardTrigger>
+                          <span className="mt-1 line-clamp-2 text-[11px] font-medium leading-tight text-foreground">
+                            {uni.name}
+                          </span>
+                        </button>
+                      </HoverCardTrigger>
 
-                    <HoverCardContent
-                      side={system === 'qs' ? 'bottom' : 'top'}
-                      className="w-64 rounded-2xl"
-                    >
-                      <div className="flex items-center gap-3">
-                        <UniversityLogo university={uni} size={40} />
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-foreground">{uni.name}</p>
-                          <p className="text-xs text-muted-foreground">{uni.country}</p>
-                        </div>
-                      </div>
-                      <Separator className="my-3" />
-                      <dl className="space-y-1 text-xs">
-                        {ALL_SYSTEMS.map((s) => (
-                          <div key={s} className="flex items-center justify-between">
-                            <dt className="text-muted-foreground">{SYSTEM_SHORT[s]} · {year}</dt>
-                            <dd className="font-semibold" style={{ color: SYSTEM_COLOR[s] }}>
-                              {uni.rankings[s][String(year)] != null
-                                ? `#${uni.rankings[s][String(year)]}`
-                                : '—'}
-                            </dd>
+                      <HoverCardContent side={system === 'qs' ? 'bottom' : 'top'} className="w-64 rounded-2xl">
+                        <div className="flex items-center gap-3">
+                          <UniversityLogo university={uni} size={40} />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-foreground">{uni.name}</p>
+                            <p className="text-xs text-muted-foreground">{uni.country}</p>
                           </div>
-                        ))}
-                      </dl>
-                      <Separator className="my-3" />
-                      <div className="flex flex-col gap-1.5 text-xs">
-                        <a
-                          href={uni.qsUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 font-medium hover:underline"
-                          style={{ color: SYSTEM_COLOR.qs }}
-                        >
-                          <ExternalLink className="size-3" /> QS ranking page
-                        </a>
-                        <a
-                          href={uni.usnewsUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 font-medium hover:underline"
-                          style={{ color: SYSTEM_COLOR.usnews }}
-                        >
-                          <ExternalLink className="size-3" /> US News ranking page
-                        </a>
-                        <Button size="sm" className="mt-1.5 h-8 rounded-xl" onClick={() => onSelect(uni.id)}>
-                          <LineChart className="size-3.5" /> View trend over years
-                        </Button>
-                      </div>
-                    </HoverCardContent>
-                  </HoverCard>
-                </div>
-              )
-            }),
+                        </div>
+                        <Separator className="my-3" />
+                        <dl className="space-y-1 text-xs">
+                          {ALL_SYSTEMS.map((s) => (
+                            <div key={s} className="flex items-center justify-between">
+                              <dt className="text-muted-foreground">{SYSTEM_SHORT[s]} · {year}</dt>
+                              <dd className="font-semibold" style={{ color: SYSTEM_COLOR[s] }}>
+                                {uni.rankings[s][String(year)] != null
+                                  ? `#${uni.rankings[s][String(year)]}`
+                                  : '—'}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                        <Separator className="my-3" />
+                        <div className="flex flex-col gap-1.5 text-xs">
+                          <a href={uni.qsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium hover:underline" style={{ color: SYSTEM_COLOR.qs }}>
+                            <ExternalLink className="size-3" /> QS ranking page
+                          </a>
+                          <a href={uni.usnewsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium hover:underline" style={{ color: SYSTEM_COLOR.usnews }}>
+                            <ExternalLink className="size-3" /> US News ranking page
+                          </a>
+                          <Button size="sm" className="mt-1.5 h-8 rounded-xl" onClick={() => onSelect(uni.id)}>
+                            <LineChart className="size-3.5" /> View trend over years
+                          </Button>
+                        </div>
+                      </HoverCardContent>
+                    </HoverCard>
+                  </div>
+                )
+              }),
           )}
 
-          <div ref={sentinelRef} className="absolute right-0 top-0 h-full w-1" aria-hidden />
+          {isEmpty && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
+              <p className="text-sm font-medium text-foreground">No ranking data for {year}</p>
+              <p className="max-w-xs text-xs text-muted-foreground">
+                QS rankings start in 2004 and US News Best Global in 2015 — drag the year forward.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
-      {hasMore && (
+      {!isEmpty && totalShown < totalAll && (
         <div className="border-t border-border px-4 py-2 text-center text-xs text-muted-foreground">
-          Scroll right to load more universities…
+          Scroll right to reveal more universities ({totalShown}/{totalAll} shown)
         </div>
       )}
     </div>

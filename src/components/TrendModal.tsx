@@ -111,11 +111,21 @@ export default function TrendModal({ university, meta, onClose }: TrendModalProp
                 </g>
               ))}
 
-              {years.map((yr) => (
-                <text key={yr} x={x(yr)} y={H - M.bottom + 20} textAnchor="middle" className="fill-muted-foreground text-[11px]">
-                  {yr}
-                </text>
-              ))}
+              {years.map((yr, i) => {
+                // Thin the labels when the range is long (e.g. 2000–2026).
+                const isLast = i === years.length - 1
+                const show = years.length <= 10 || (yr - years[0]) % 4 === 0 || isLast
+                return (
+                  <g key={yr}>
+                    <line x1={x(yr)} x2={x(yr)} y1={H - M.bottom} y2={H - M.bottom + 5} className="stroke-border" />
+                    {show && (
+                      <text x={x(yr)} y={H - M.bottom + 20} textAnchor="middle" className="fill-muted-foreground text-[11px]">
+                        {yr}
+                      </text>
+                    )}
+                  </g>
+                )
+              })}
 
               {/* Error bars between QS and US News */}
               {years.map((yr) => {
