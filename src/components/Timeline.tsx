@@ -21,9 +21,9 @@ const SYSTEM_COLOR: Record<SystemKey, string> = {
   qs: 'var(--color-qs)',
   usnews: 'var(--color-usnews)',
 }
-const SYSTEM_SHORT: Record<SystemKey, string> = { qs: 'QS', usnews: 'US News' }
+const SYSTEM_SHORT: Record<SystemKey, string> = { qs: 'QS', usnews: 'U.S. News' }
 
-const MARGIN = { left: 48, right: 140 }
+const MARGIN = { left: 176, right: 140 }
 const PX_PER_RANK = 30
 const MIN_WIDTH = 900
 const HEIGHT = 500
@@ -55,9 +55,10 @@ export default function Timeline({ universities, year, systems, systemLabels, lo
         .sort((a, b) => a.rank - b.rank)
       const seen = new Map<number, number>()
       for (const p of points) {
-        const offset = seen.get(p.rank) ?? 0
-        seen.set(p.rank, offset + 1)
-        laid[system].push({ ...p, offset })
+        const count = seen.get(p.rank) ?? 0
+        seen.set(p.rank, count + 1)
+        // Cap the vertical stack — QS bands high ranks into large ties.
+        laid[system].push({ ...p, offset: Math.min(count, 6) })
         if (p.rank > max) max = p.rank
       }
     }
@@ -118,10 +119,10 @@ export default function Timeline({ universities, year, systems, systemLabels, lo
       {activeSystems.map((system) => (
         <div
           key={system}
-          className="pointer-events-none absolute left-0 z-20 -translate-y-1/2 px-2.5 py-1 text-[11px] font-medium uppercase tracking-widest text-white"
-          style={{ top: LANE_Y[system], background: SYSTEM_COLOR[system] }}
+          className="pointer-events-none absolute left-0 z-20 w-40 -translate-y-1/2 bg-card py-1 pl-4 pr-2 text-[11px] font-semibold uppercase leading-tight tracking-wide"
+          style={{ top: LANE_Y[system], color: SYSTEM_COLOR[system] }}
         >
-          {SYSTEM_SHORT[system]}
+          {systemLabels[system]}
         </div>
       ))}
 
@@ -210,9 +211,11 @@ export default function Timeline({ universities, year, systems, systemLabels, lo
                           <a href={uni.qsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:opacity-60" style={{ color: SYSTEM_COLOR.qs }}>
                             <FiExternalLink className="size-3" /> QS ranking page
                           </a>
-                          <a href={uni.usnewsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:opacity-60" style={{ color: SYSTEM_COLOR.usnews }}>
-                            <FiExternalLink className="size-3" /> US News ranking page
-                          </a>
+                          {uni.usnewsUrl && (
+                            <a href={uni.usnewsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:opacity-60" style={{ color: SYSTEM_COLOR.usnews }}>
+                              <FiExternalLink className="size-3" /> U.S. News ranking page
+                            </a>
+                          )}
                           <button
                             onClick={() => onSelect(uni.id)}
                             className="mt-1 inline-flex items-center justify-center gap-1.5 border border-foreground px-3 py-1.5 text-foreground transition-colors duration-200 hover:bg-foreground hover:text-background"

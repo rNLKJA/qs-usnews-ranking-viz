@@ -81,7 +81,7 @@ export default function TrendModal({ university, meta, onClose }: TrendModalProp
               {SYSTEMS.map((s) => (
                 <span key={s} className="inline-flex items-center gap-2">
                   <span className="inline-block size-3 rounded-full" style={{ background: SYSTEM_COLOR[s] }} />
-                  {s === 'qs' ? 'QS' : 'US News'}
+                  {meta.systemLabels[s]}
                 </span>
               ))}
               <span className="inline-flex items-center gap-2">
@@ -173,14 +173,16 @@ export default function TrendModal({ university, meta, onClose }: TrendModalProp
               >
                 <FiExternalLink className="size-3.5" /> QS ranking page
               </a>
-              <a
-                href={university.usnewsUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 border border-border px-4 py-2 text-[11px] uppercase tracking-widest transition-colors duration-200 hover:bg-foreground hover:text-background"
-              >
-                <FiExternalLink className="size-3.5" /> US News ranking page
-              </a>
+              {university.usnewsUrl && (
+                <a
+                  href={university.usnewsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 border border-border px-4 py-2 text-[11px] uppercase tracking-widest transition-colors duration-200 hover:bg-foreground hover:text-background"
+                >
+                  <FiExternalLink className="size-3.5" /> U.S. News ranking page
+                </a>
+              )}
             </div>
           </>
         )}

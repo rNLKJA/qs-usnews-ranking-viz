@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 
 const GITHUB_URL = 'https://github.com/rNLKJA/qs-usnews-ranking-viz'
 const COFFEE_URL = 'https://buymeacoffee.com/rnlkja'
+const MAX_LIST = 80
 
 interface SidebarProps {
   meta: DatasetMeta
@@ -101,7 +102,7 @@ export default function Sidebar({
           />
         </div>
 
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {(['qs', 'usnews'] as SystemKey[]).map((s) => {
             const on = systems.includes(s)
             return (
@@ -109,12 +110,16 @@ export default function Sidebar({
                 key={s}
                 onClick={() => onToggleSystem(s)}
                 aria-pressed={on}
-                className={`flex flex-1 items-center justify-center gap-2 border px-2 py-2 text-[11px] uppercase tracking-widest transition-colors duration-200 ${
-                  on ? 'border-foreground bg-foreground text-background' : 'border-border text-foreground hover:bg-accent'
+                className={`flex items-center justify-center gap-2 border bg-card px-2 py-2 text-[11px] uppercase tracking-widest transition-all duration-200 ${
+                  on ? 'font-semibold' : 'border-border text-muted-foreground opacity-60 hover:opacity-100'
                 }`}
+                style={on ? { borderColor: SYSTEM_COLOR[s], color: SYSTEM_COLOR[s], borderWidth: 2 } : undefined}
               >
-                <span className="size-2 rounded-full" style={{ background: SYSTEM_COLOR[s] }} />
-                {s === 'qs' ? 'QS' : 'US News'}
+                <span
+                  className="size-2.5 rounded-full"
+                  style={{ background: on ? SYSTEM_COLOR[s] : 'transparent', border: on ? 'none' : '1.5px solid currentColor' }}
+                />
+                {s === 'qs' ? 'QS' : 'U.S. News'}
               </button>
             )
           })}
@@ -137,7 +142,7 @@ export default function Sidebar({
             </p>
             <ScrollArea className="min-h-0 flex-1 px-2 pb-2">
               <ul>
-                {list.map((u) => (
+                {list.slice(0, MAX_LIST).map((u) => (
                   <li key={u.id}>
                     <button
                       onClick={() => onLocate(u.id)}
@@ -157,6 +162,11 @@ export default function Sidebar({
                 ))}
                 {list.length === 0 && (
                   <li className="px-2 py-6 text-center text-sm text-muted-foreground">No matches.</li>
+                )}
+                {list.length > MAX_LIST && (
+                  <li className="px-2 py-3 text-center text-[10px] uppercase tracking-widest text-muted-foreground">
+                    +{list.length - MAX_LIST} more · search to narrow
+                  </li>
                 )}
               </ul>
             </ScrollArea>

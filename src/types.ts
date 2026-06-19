@@ -8,14 +8,14 @@ export interface University {
   name: string
   shortName: string
   country: string
-  /** Primary web domain — used to resolve a logo via favicon. */
-  domain: string
-  /** Optional explicit logo path (overrides the favicon). */
+  /** Optional web domain — used to resolve a favicon when no logo is given. */
+  domain?: string
+  /** Logo image URL (from QS) — overrides the favicon. */
   logo?: string
   /** Link to the university's QS profile page. */
   qsUrl: string
-  /** Link to the university's US News Best Global Universities profile page. */
-  usnewsUrl: string
+  /** Link to the university's U.S. News profile page (curated set only). */
+  usnewsUrl?: string
   rankings: Record<SystemKey, RankByYear>
 }
 
@@ -23,6 +23,7 @@ export interface DatasetMeta {
   years: number[]
   systems: SystemKey[]
   systemLabels: Record<SystemKey, string>
+  systemShort: Record<SystemKey, string>
   defaultUniversity: string
 }
 
