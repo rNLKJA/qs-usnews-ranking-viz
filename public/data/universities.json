@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "years": [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026],
+    "systems": ["qs", "usnews"],
+    "systemLabels": { "qs": "QS World University Rankings", "usnews": "US News Best Global Universities" },
+    "defaultUniversity": "unimelb"
+  },
+  "universities": [
+    {
+      "id": "unimelb",
+      "name": "University of Melbourne",
+      "shortName": "Melbourne",
+      "country": "Australia",
+      "rankings": {
+        "qs":     { "2019": 39, "2020": 38, "2021": 41, "2022": 37, "2023": 33, "2024": 14, "2025": 13, "2026": 19 },
+        "usnews": { "2019": 26, "2020": 26, "2021": 25, "2022": 26, "2023": 27, "2024": 27, "2025": 28, "2026": 28 }
+      }
+    },
+    {
+      "id": "usyd",
+      "name": "University of Sydney",
+      "shortName": "Sydney",
+      "country": "Australia",
+      "rankings": {
+        "qs":     { "2019": 42, "2020": 42, "2021": 40, "2022": 38, "2023": 41, "2024": 19, "2025": 18, "2026": 25 },
+        "usnews": { "2019": 31, "2020": 27, "2021": 27, "2022": 28, "2023": 28, "2024": 28, "2025": 31, "2026": 31 }
+      }
+    },
+    {
+      "id": "anu",
+      "name": "Australian National University",
+      "shortName": "ANU",
+      "country": "Australia",
+      "rankings": {
+        "qs":     { "2019": 24, "2020": 29, "2021": 31, "2022": 27, "2023": 30, "2024": 34, "2025": 30, "2026": 32 },
+        "usnews": { "2019": 69, "2020": 66, "2021": 62, "2022": 67, "2023": 75, "2024": 78, "2025": 82, "2026": 80 }
+      }
+    },
+    {
+      "id": "oxford",
+      "name": "University of Oxford",
+      "shortName": "Oxford",
+      "country": "United Kingdom",
+      "rankings": {
+        "qs":     { "2019": 5, "2020": 4, "2021": 5, "2022": 2, "2023": 4, "2024": 3, "2025": 3, "2026": 4 },
+        "usnews": { "2019": 5, "2020": 5, "2021": 5, "2022": 5, "2023": 5, "2024": 5, "2025": 4, "2026": 4 }
+      }
+    },
+    {
+      "id": "mit",
+      "name": "Massachusetts Institute of Technology",
+      "shortName": "MIT",
+      "country": "United States",
+      "rankings": {
+        "qs":     { "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 1, "2026": 1 },
+        "usnews": { "2019": 2, "2020": 2, "2021": 2, "2022": 2, "2023": 2, "2024": 2, "2025": 2, "2026": 2 }
+      }
+    },
+    {
+      "id": "nus",
+      "name": "National University of Singapore",
+      "shortName": "NUS",
+      "country": "Singapore",
+      "rankings": {
+        "qs":     { "2019": 11, "2020": 11, "2021": 11, "2022": 11, "2023": 11, "2024": 8, "2025": 8, "2026": 8 },
+        "usnews": { "2019": 34, "2020": 34, "2021": 32, "2022": 29, "2023": 26, "2024": 26, "2025": 25, "2026": 24 }
+      }
+    }
+  ]
+}

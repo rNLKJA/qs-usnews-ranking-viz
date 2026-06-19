@@ -1,0 +1,52 @@
+@import 'tailwindcss';
+
+/* Design tokens shared across the app and the D3 visualisations. */
+@theme {
+  --color-qs: #2563eb;
+  --color-qs-soft: #93c5fd;
+  --color-usnews: #dc2626;
+  --color-usnews-soft: #fca5a5;
+  --color-ink: #0f172a;
+  --color-muted: #64748b;
+  --color-surface: #ffffff;
+  --color-surface-2: #f8fafc;
+  --color-line: #e2e8f0;
+  --font-sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-surface-2);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #0b1120;
+    color: #e2e8f0;
+  }
+}
+
+/* Modal backdrop (native <dialog>). */
+dialog::backdrop {
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+dialog {
+  border: none;
+  padding: 0;
+  background: transparent;
+}
