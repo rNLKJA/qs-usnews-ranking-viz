@@ -12,9 +12,9 @@ export interface University {
   domain?: string
   /** Logo image URL (from QS) — overrides the favicon. */
   logo?: string
-  /** Link to the university's QS profile page. */
-  qsUrl: string
-  /** Link to the university's U.S. News profile page (curated set only). */
+  /** Link to the university's QS profile page (QS-listed universities). */
+  qsUrl?: string
+  /** Link to the university's U.S. News profile page. */
   usnewsUrl?: string
   rankings: Record<SystemKey, RankByYear>
 }

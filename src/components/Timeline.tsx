@@ -23,12 +23,12 @@ const SYSTEM_COLOR: Record<SystemKey, string> = {
 }
 const SYSTEM_SHORT: Record<SystemKey, string> = { qs: 'QS', usnews: 'U.S. News' }
 
-const MARGIN = { left: 176, right: 140 }
-const PX_PER_RANK = 30
+const MARGIN = { left: 200, right: 160 }
+const PX_PER_RANK = 116
 const MIN_WIDTH = 900
-const HEIGHT = 500
-const LANE_Y: Record<SystemKey, number> = { qs: 150, usnews: 360 }
-const STACK_STEP = 96
+const HEIGHT = 540
+const LANE_Y: Record<SystemKey, number> = { qs: 170, usnews: 400 }
+const STACK_STEP = 100
 const REVEAL_BUFFER = 240
 
 /**
@@ -208,9 +208,11 @@ export default function Timeline({ universities, year, systems, systemLabels, lo
                         </dl>
                         <Separator className="my-3" />
                         <div className="flex flex-col gap-2 text-[11px] uppercase tracking-widest">
-                          <a href={uni.qsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:opacity-60" style={{ color: SYSTEM_COLOR.qs }}>
-                            <FiExternalLink className="size-3" /> QS ranking page
-                          </a>
+                          {uni.qsUrl && (
+                            <a href={uni.qsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:opacity-60" style={{ color: SYSTEM_COLOR.qs }}>
+                              <FiExternalLink className="size-3" /> QS ranking page
+                            </a>
+                          )}
                           {uni.usnewsUrl && (
                             <a href={uni.usnewsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:opacity-60" style={{ color: SYSTEM_COLOR.usnews }}>
                               <FiExternalLink className="size-3" /> U.S. News ranking page

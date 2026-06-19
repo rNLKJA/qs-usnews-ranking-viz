@@ -54,8 +54,8 @@ export default function App() {
         />
       )}
 
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto px-6 py-8 md:px-10">
-        <header className="mb-7 max-w-3xl">
+      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto px-8 py-10 md:px-14 md:py-12">
+        <header className="mb-10 max-w-3xl">
           <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
             QS × US News · 2004–2026
           </p>

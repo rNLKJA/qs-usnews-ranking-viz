@@ -165,14 +165,16 @@ export default function TrendModal({ university, meta, onClose }: TrendModalProp
 
             {/* Source links — outlined, invert on hover (Nothing) */}
             <div className="flex flex-wrap gap-3">
-              <a
-                href={university.qsUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 border border-border px-4 py-2 text-[11px] uppercase tracking-widest transition-colors duration-200 hover:bg-foreground hover:text-background"
-              >
-                <FiExternalLink className="size-3.5" /> QS ranking page
-              </a>
+              {university.qsUrl && (
+                <a
+                  href={university.qsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 border border-border px-4 py-2 text-[11px] uppercase tracking-widest transition-colors duration-200 hover:bg-foreground hover:text-background"
+                >
+                  <FiExternalLink className="size-3.5" /> QS ranking page
+                </a>
+              )}
               {university.usnewsUrl && (
                 <a
                   href={university.usnewsUrl}

@@ -12,29 +12,37 @@ npm run data        # = node scripts/build-dataset.mjs
 
 1. **Pulls the full QS World University Rankings** from the official
    topuniversities.com REST endpoint — the same JSON the rankings table loads
-   from. One call per 500 rows, ~1,500 universities total. Each record gives
-   `rank`, `title`, `country`, profile `path`, and a `logo` URL.
+   from. ~1,500 universities. Each record gives `rank`, `title`, `country`,
+   profile `path`, and a `logo` URL.
    - Endpoint: `https://www.topuniversities.com/rankings/endpoint?nid=<NID>&page=<n>&items_per_page=500&tab=indicators`
    - `<NID>` is the edition's node id. Find it in the page source of
      `topuniversities.com/world-university-rankings` as
      `"qs_rankings_rest_api":{"nid":"…"}`. Current: **4153156** (QS 2026).
-2. **Parses ranks** — `"1"`, `"=42"`, `"1201-1400"`, `"1401+"` → leading integer
-   (`1`, `42`, `1201`, `1401`). The first number is used as the position.
-3. **Merges a curated set** (6 universities) keyed by QS profile slug, which
-   carry full QS history back to 2004 and U.S. News Best Global history (2015–)
-   plus a U.S. News profile link. See `CURATED` in the script.
-4. Writes the dataset sorted by latest QS rank.
+2. **Pulls the full U.S. News Best Global Universities** from its JSON API
+   (`usnews.com/education/best-global-universities/api/search?format=json&page=<n>`),
+   ~2,250 ranked universities across ~225 pages of 10. **Note:** `curl` is
+   Cloudflare-blocked here (returns `000`/`403`), but Node's `fetch` (undici TLS)
+   gets through — so the pipeline must run under Node, not shell `curl`.
+3. **Parses ranks** — `"1"`, `"=42"`, `"1,183"`, `"1201-1400"`, `"1401+"` →
+   integer (`1`, `42`, `1183`, `1201`, `1401`). Thousands commas are stripped
+   first (otherwise `"1,183"` would parse as `1`).
+4. **Matches the two systems by normalised name** (`normKey`: strip
+   parentheticals / diacritics / "university|the|of|at"). Matched universities
+   carry both `rankings.qs` and `rankings.usnews`; QS-only and U.S. News-only
+   universities carry just one. ~993 match.
+5. **Merges a curated set** (6 universities) keyed by QS profile slug, which
+   carry full QS history back to 2004 and U.S. News history back to 2015. See
+   `CURATED` in the script.
+6. Writes the dataset sorted by best (lowest) latest rank across the two systems.
 
-## Why U.S. News is only the curated 6
+## Coverage
 
-The U.S. News Best Global Universities API
-(`usnews.com/education/best-global-universities/api/search`) is Cloudflare-
-protected and returns `000`/`403` to a plain server fetch, so it can't be
-ingested the same way. The 6 curated universities therefore carry U.S. News
-data (archive-sourced — see `data-sourcing.md`); everyone else is QS-only and
-their U.S. News rank shows as `—`. To add U.S. News at scale later, fetch it
-through an unblocked path (e.g. a headless browser or a paid proxy) and write
-the values into each university's `rankings.usnews`.
+- **QS:** all ~1,500 universities (2026). 6 curated also have QS 2004–2025.
+- **U.S. News:** all ~2,250 ranked universities (2026). 6 curated also have
+  U.S. News 2015–2025.
+- ~993 universities have **both** systems (these get the comparison + the
+  connector in the trend modal). The rest show one system and `—` for the other.
+- Logos come from QS only, so U.S. News-only universities use a monogram.
 
 ## Logos
 

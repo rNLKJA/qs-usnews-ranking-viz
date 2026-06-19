@@ -65,11 +65,25 @@ const CURATED = {
 }
 
 const parseRank = (s) => {
-  const m = String(s ?? '').match(/\d+/)
+  // Strip thousands separators first ("1,183" → 1183, not 1).
+  const m = String(s ?? '').replace(/[,\s]/g, '').match(/\d+/)
   return m ? parseInt(m[0], 10) : null
 }
 
 const slugOf = (p) => String(p || '').split('/').filter(Boolean).pop() || ''
+
+/** Normalised name key for matching a university across QS and U.S. News. */
+const normKey = (s) =>
+  String(s || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\b(universit\w*|the|of|at)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 
 const shortNameOf = (title) => {
   const m = title.match(/\(([^)]+)\)/) // prefer an abbreviation in parentheses
@@ -102,10 +116,54 @@ async function fetchQs() {
   return nodes
 }
 
+async function fetchUsNews() {
+  // U.S. News Best Global Universities — paginated JSON. curl is Cloudflare-
+  // blocked, but Node's fetch (undici TLS) gets through.
+  const items = []
+  let page = 1
+  let totalPages = 1
+  do {
+    const url = `https://www.usnews.com/education/best-global-universities/api/search?format=json&page=${page}`
+    const res = await fetch(url, {
+      headers: { 'User-Agent': UA, Accept: 'application/json', Referer: 'https://www.usnews.com/education/best-global-universities/rankings' },
+    })
+    if (!res.ok) {
+      if (page === 1) throw new Error(`U.S. News fetch failed: ${res.status}`)
+      break
+    }
+    const data = await res.json()
+    totalPages = data.total_pages
+    for (const it of data.items || []) {
+      const rk = (it.ranks || []).find((r) => /best global/i.test(r.label))
+      const rank = parseRank(rk?.value)
+      if (rank == null) continue
+      items.push({ name: it.name, country: it.country_name || '', url: it.url, rank })
+    }
+    process.stdout.write(`\rU.S. News: page ${page}/${totalPages} (${items.length})`)
+    page += 1
+    await new Promise((r) => setTimeout(r, 200))
+  } while (page <= totalPages && page <= 300)
+  process.stdout.write('\n')
+  return items
+}
+
 async function main() {
   const nodes = await fetchQs()
+  const usnItems = await fetchUsNews()
+
+  // Index U.S. News by normalised name for matching against QS.
+  const usnByKey = new Map()
+  for (const u of usnItems) {
+    const k = normKey(u.name)
+    if (k && !usnByKey.has(k)) usnByKey.set(k, u)
+  }
+  const usedUsn = new Set()
+
   const universities = []
   const seen = new Set()
+  let matched = 0
+
+  // QS universities (with U.S. News merged in by name where it matches).
   for (const n of nodes) {
     const slug = slugOf(n.path)
     if (!slug || seen.has(slug)) continue
@@ -116,9 +174,20 @@ async function main() {
     const qs = emptyYears()
     const usnews = emptyYears()
     qs[String(QS_YEAR)] = rank
+    const key = normKey(n.title)
+    const usn = usnByKey.get(key)
+    let usnewsUrl
     if (curated) {
       for (const [y, v] of Object.entries(curated.qs)) qs[y] = v
       for (const [y, v] of Object.entries(curated.usnews)) usnews[y] = v
+      usnewsUrl = curated.usnewsUrl
+    } else if (usn) {
+      usnews[String(QS_YEAR)] = usn.rank
+      usnewsUrl = usn.url
+    }
+    if (usn) {
+      usedUsn.add(key)
+      matched += 1
     }
     universities.push({
       id: slug,
@@ -127,12 +196,34 @@ async function main() {
       country: n.country || '',
       logo: n.logo || undefined,
       qsUrl: `https://www.topuniversities.com${n.path}`,
-      ...(curated ? { usnewsUrl: curated.usnewsUrl } : {}),
+      ...(usnewsUrl ? { usnewsUrl } : {}),
       rankings: { qs, usnews },
     })
   }
-  // Stable order: by QS latest rank.
-  universities.sort((a, b) => (a.rankings.qs[String(QS_YEAR)] ?? 9e9) - (b.rankings.qs[String(QS_YEAR)] ?? 9e9))
+
+  // U.S. News-only universities (no QS entry).
+  let usnOnly = 0
+  for (const u of usnItems) {
+    const key = normKey(u.name)
+    if (!key || usedUsn.has(key)) continue
+    usedUsn.add(key)
+    const usnews = emptyYears()
+    usnews[String(QS_YEAR)] = u.rank
+    universities.push({
+      id: `usn-${slugOf(u.url) || key.replace(/\s+/g, '-')}`,
+      name: u.name,
+      shortName: shortNameOf(u.name),
+      country: u.country,
+      usnewsUrl: u.url,
+      rankings: { qs: emptyYears(), usnews },
+    })
+    usnOnly += 1
+  }
+
+  // Stable order: by best (lowest) latest rank across the two systems.
+  const best = (u) =>
+    Math.min(u.rankings.qs[String(QS_YEAR)] ?? 9e9, u.rankings.usnews[String(QS_YEAR)] ?? 9e9)
+  universities.sort((a, b) => best(a) - best(b))
 
   const dataset = {
     meta: {
@@ -142,14 +233,17 @@ async function main() {
       systemShort: { qs: 'QS', usnews: 'U.S. News' },
       defaultUniversity: 'university-melbourne',
       coverage: {
-        qs: `Full QS World University Rankings ${QS_YEAR} (${universities.length} universities) from the official topuniversities.com endpoint; ${Object.keys(CURATED).length} curated universities also carry QS history back to 2004.`,
-        usnews: 'U.S. News Best Global Universities (2015–) for the curated set only — the U.S. News API is not openly fetchable.',
+        qs: `Full QS World University Rankings ${QS_YEAR} (${nodes.length} universities) from topuniversities.com; ${Object.keys(CURATED).length} curated universities also carry QS history back to 2004.`,
+        usnews: `Full U.S. News Best Global Universities ${QS_YEAR} (${usnItems.length} universities) from the U.S. News API; the curated set also carries U.S. News history back to 2015.`,
       },
     },
     universities,
   }
   await writeFile(OUT, JSON.stringify(dataset) + '\n')
-  console.log(`Wrote ${universities.length} universities → ${OUT}`)
+  console.log(
+    `Wrote ${universities.length} universities → ${OUT}\n` +
+      `  QS: ${nodes.length} · U.S. News: ${usnItems.length} · matched: ${matched} · U.S. News-only: ${usnOnly}`,
+  )
 }
 
 main().catch((e) => {

@@ -9,8 +9,10 @@ interface UniversityLogoProps {
 }
 
 /**
- * University logo as a borderless square with rounded corners. Prefers the QS
- * logo URL, falls back to the domain favicon, then to a monogram.
+ * University logo as a borderless square with lightly rounded corners (the
+ * `rounded-[16%]` class overrides the Avatar's default `rounded-full`). A subtle
+ * tint keeps the square readable on white. Prefers the QS logo, then the domain
+ * favicon, then a monogram.
  */
 export default function UniversityLogo({ university, size = 46, className }: UniversityLogoProps) {
   const src =
@@ -19,19 +21,16 @@ export default function UniversityLogo({ university, size = 46, className }: Uni
   const initials = university.shortName.slice(0, 3).toUpperCase()
 
   return (
-    <Avatar className={cn(className)} style={{ width: size, height: size, borderRadius: '20%' }}>
+    <Avatar className={cn('rounded-[16%] bg-[#f4f4f4]', className)} style={{ width: size, height: size }}>
       {src && (
         <AvatarImage
           src={src}
           alt={`${university.name} logo`}
           referrerPolicy="no-referrer"
-          className="object-contain"
+          className="rounded-[16%] object-contain"
         />
       )}
-      <AvatarFallback
-        className="bg-muted font-medium text-foreground"
-        style={{ fontSize: size * 0.28, borderRadius: '20%' }}
-      >
+      <AvatarFallback className="rounded-[16%] bg-[#f4f4f4] font-medium text-foreground" style={{ fontSize: size * 0.28 }}>
         {initials}
       </AvatarFallback>
     </Avatar>
