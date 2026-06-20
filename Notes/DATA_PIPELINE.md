@@ -37,13 +37,24 @@ dataset and the source of truth; `universities.json` is derived from the same ru
   This serves **every edition 2011–present**, so THE is the multi-year backbone.
   Record gives rank, name, `location` (country), profile url, scores.
 
+### QS history via archived edition NIDs
+
+The QS endpoint takes a `nid` (edition node id) and — crucially — the **live**
+endpoint still serves **old** NIDs in full. So QS history is obtained by:
+1. Harvesting QS endpoint NIDs from the **Wayback Machine** CDX API.
+2. Fetching each live, identifying its edition by a fingerprint of known ranks
+   (Melbourne / Sydney / NUS), keeping the World University Rankings tables.
+3. Mapping year → NID in `QS_EDITIONS` (config only — the ranks are fetched live).
+
+This yields **QS 2016–2027** (2020 missing — the endpoint wasn't archived in
+2019/2020). Note nid 4153156 is the QS **2027** edition.
+
 ## Coverage
 
-- **THE: 2011–2026** (multi-year — real trends).
-- **QS & U.S. News: 2026 only** — their live APIs expose only the current edition
-  (verified: QS one NID; U.S. News ignores `year`/`schema`). No hard-coding, so
-  no synthetic history for these two.
-- `meta.years = 2011..2026`; for pre-2026 years only THE has data.
+- **QS 2016–2027** (no 2020) · **THE 2011–2026** · **U.S. News 2026**.
+- U.S. News stays current-only — its API serves one edition and Wayback only
+  archived scattered pages, not full editions.
+- `meta.years = 2011..2027`; `meta.featuredYear = 2026` (richest cross-system year).
 
 ## Built on this dataset
 

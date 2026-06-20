@@ -20,7 +20,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [locate, setLocate] = useState<{ id: string; nonce: number } | null>(null)
 
-  const activeYear = year ?? (meta ? meta.years[meta.years.length - 1] : 2026)
+  const activeYear = year ?? meta?.featuredYear ?? (meta ? meta.years[meta.years.length - 1] : 2026)
 
   const sorted = useMemo(() => {
     const y = String(activeYear)
@@ -69,7 +69,7 @@ export default function App() {
           </p>
           <p className="mt-2 text-sm font-light leading-relaxed text-muted-foreground">
             Pick a university to find it on the timeline, then click its logo for the rank trend across all three
-            systems. THE spans 2011–2026; QS &amp; U.S. News are the current edition. Lower is better.
+            systems. QS spans 2016–2027, THE 2011–2026, U.S. News 2026. Lower is better.
           </p>
         </header>
 

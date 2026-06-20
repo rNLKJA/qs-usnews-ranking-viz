@@ -107,7 +107,7 @@ export default function Sidebar({
             <span className="font-medium tabular-nums text-foreground">{year}</span>
           </div>
           <Slider min={meta.years[0]} max={meta.years[meta.years.length - 1]} step={1} value={[year]} onValueChange={([v]) => onYearChange(v)} />
-          <p className="text-[9px] uppercase tracking-widest text-muted-foreground">THE 2011–2026 · QS &amp; USN 2026</p>
+          <p className="text-[9px] uppercase tracking-widest text-muted-foreground">QS 2016–2027 · THE 2011–2026 · USN 2026</p>
         </div>
 
         {/* Spacing */}

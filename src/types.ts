@@ -29,6 +29,8 @@ export interface University {
 
 export interface DatasetMeta {
   years: number[]
+  /** Richest cross-system year — the app's default. */
+  featuredYear?: number
   systems: SystemKey[]
   systemLabels: Record<SystemKey, string>
   systemShort: Record<SystemKey, string>
