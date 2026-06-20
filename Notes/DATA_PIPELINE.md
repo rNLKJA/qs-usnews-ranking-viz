@@ -46,15 +46,17 @@ endpoint still serves **old** NIDs in full. So QS history is obtained by:
    (Melbourne / Sydney / NUS), keeping the World University Rankings tables.
 3. Mapping year → NID in `QS_EDITIONS` (config only — the ranks are fetched live).
 
-This yields **QS 2016–2027** (2020 missing — the endpoint wasn't archived in
-2019/2020). Note nid 4153156 is the QS **2027** edition.
+This yields **QS 2016–2027, complete** (the 2020 edition id, 914824, was found
+in a wider Wayback sweep of 359 NIDs). Note nid 4153156 is the QS **2027** edition.
 
 ## Coverage
 
-- **QS 2016–2027** (no 2020) · **THE 2011–2026** · **U.S. News 2026**.
-- U.S. News stays current-only — its API serves one edition and Wayback only
-  archived scattered pages, not full editions.
-- `meta.years = 2011..2027`; `meta.featuredYear = 2026` (richest cross-system year).
+- **QS 2016–2027** (complete) · **THE 2011–2026** · **U.S. News Best Global 2026**
+  · **U.S. News National 1984–2025** (U.S.-only archive).
+- U.S. News **Best Global** stays current-only — its API serves one edition and
+  Wayback only archived scattered pages (top ~40, mixed editions), so there is
+  no recoverable history. Not fabricated.
+- `meta.years = 1984..2027`; `meta.featuredYear = 2026` (richest cross-system year).
 
 ## Built on this dataset
 

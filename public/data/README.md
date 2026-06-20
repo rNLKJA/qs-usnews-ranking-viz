@@ -1,6 +1,6 @@
 # World University Rankings — QS, U.S. News & Times Higher Education (2027.4)
 
-Openly-licensed, tidy dataset built for trend & cross-system comparison. **3790** universities.
+Openly-licensed, tidy dataset built for trend & cross-system comparison. **3791** universities.
 
 ## Files
 - `universities.csv` — one row per university (id, name, country, region, city, description, profile links).
@@ -9,7 +9,7 @@ Openly-licensed, tidy dataset built for trend & cross-system comparison. **3790*
 - `datapackage.json` — Frictionless descriptor.
 
 ## Coverage
-QS 2016–2027 (no 2020); THE 2011–2026; U.S. News Best Global 2026; U.S. News National 1984–2025 (U.S. only). 3790 universities.
+QS 2016–2027; THE 2011–2026; U.S. News Best Global 2026 (current edition only — no public history); U.S. News National 1984–2025 (U.S. only). 3791 universities.
 
 ## FAIR
 - **Findable**: stable `id`, version `2027.4`, datapackage metadata.

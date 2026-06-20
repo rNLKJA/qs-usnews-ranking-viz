@@ -1,7 +1,7 @@
 {
   "name": "world-university-rankings",
   "title": "World University Rankings — QS, U.S. News & Times Higher Education",
-  "description": "QS 2016–2027 (no 2020); THE 2011–2026; U.S. News Best Global 2026; U.S. News National 1984–2025 (U.S. only). 3790 universities.",
+  "description": "QS 2016–2027; THE 2011–2026; U.S. News Best Global 2026 (current edition only — no public history); U.S. News National 1984–2025 (U.S. only). 3791 universities.",
   "version": "2027.4",
   "licenses": [
     {

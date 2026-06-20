@@ -27,7 +27,7 @@ const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (
 // NIDs harvested from the Wayback Machine and identified by known ranks.
 // 2020 is missing — the REST endpoint wasn't archived in 2019/2020.
 const QS_EDITIONS = {
-  2016: '299926', 2017: '326584', 2018: '357051', 2019: '397863',
+  2016: '299926', 2017: '326584', 2018: '357051', 2019: '397863', 2020: '914824',
   2021: '2057712', 2022: '3740566', 2023: '3816281', 2024: '3897789',
   2025: '3990755', 2026: '4061771', 2027: '4153156',
 }
@@ -240,7 +240,7 @@ async function main() {
       the: 'https://www.timeshighereducation.com/world-university-rankings',
       usnatl: 'https://github.com/frishberg/Archive-of-US-News-College-Rankings',
     },
-    coverage: `QS ${qsYears[0]}–${qsYears[qsYears.length - 1]} (no 2020); THE ${THE_FROM}–2026; U.S. News Best Global ${USN_YEAR}; U.S. News National 1984–2025 (U.S. only). ${universities.length} universities.`,
+    coverage: `QS ${qsYears[0]}–${qsYears[qsYears.length - 1]}; THE ${THE_FROM}–2026; U.S. News Best Global ${USN_YEAR} (current edition only — no public history); U.S. News National 1984–2025 (U.S. only). ${universities.length} universities.`,
   }
 
   await writeFile(path.join(DIR, 'universities.json'), JSON.stringify({ meta, universities }) + '\n')
