@@ -31,12 +31,16 @@ const QS_EDITIONS = {
   2021: '2057712', 2022: '3740566', 2023: '3816281', 2024: '3897789',
   2025: '3990755', 2026: '4061771', 2027: '4153156',
 }
-const USN_YEAR = 2026 // U.S. News current edition
+const USN_YEAR = 2026 // U.S. News Best Global current edition
 const THE_FROM = 2011
 const LAST = 2027
-const YEARS = Array.from({ length: LAST - THE_FROM + 1 }, (_, i) => THE_FROM + i)
-const FEATURED = 2026 // richest cross-system year (QS + U.S. News + THE)
-const VERSION = `${LAST}.3`
+const MIN_YEAR = 1984 // U.S. News National archive reaches back to 1984
+const THE_YEARS = Array.from({ length: 2026 - THE_FROM + 1 }, (_, i) => THE_FROM + i)
+const META_YEARS = Array.from({ length: LAST - MIN_YEAR + 1 }, (_, i) => MIN_YEAR + i)
+const FEATURED = 2026 // richest cross-system year
+const VERSION = `${LAST}.4`
+// U.S. News National Universities ("Best Colleges") archive, 1984–2025 (public, CC).
+const USNATL_URL = 'https://raw.githubusercontent.com/frishberg/Archive-of-US-News-College-Rankings/HEAD/data.csv'
 
 const parseRank = (s) => {
   const m = String(s ?? '').replace(/[,\s]/g, '').match(/\d+/)
@@ -48,7 +52,17 @@ const normKey = (s) =>
   String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
     .replace(/\([^)]*\)/g, ' ').replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ')
     .replace(/\b(universit\w*|the|of|at)\b/g, ' ').replace(/\s+/g, ' ').trim()
-const emptyYears = () => Object.fromEntries(YEARS.map((y) => [String(y), null]))
+const parseCsvLine = (l) => {
+  const out = []
+  let cur = '', q = false
+  for (const ch of l) {
+    if (ch === '"') q = !q
+    else if (ch === ',' && !q) { out.push(cur); cur = '' }
+    else cur += ch
+  }
+  out.push(cur)
+  return out
+}
 
 async function fetchQsEditions() {
   // slug -> { info, ranks: {year: rank} }. Editions processed oldest→newest so
@@ -95,7 +109,7 @@ async function fetchUsNews() {
 async function fetchThe() {
   // year -> [{name, country, url, rank}]; aggregated into per-uni multi-year series.
   const byKey = new Map()
-  for (const yr of YEARS) {
+  for (const yr of THE_YEARS) {
     let d
     try { d = await (await fetch(`https://www.timeshighereducation.com/json/ranking_tables/world_university_rankings/${yr}`, { headers: { 'User-Agent': UA, Accept: 'application/json' } })).json() }
     catch { process.stdout.write(`\rTHE ${yr}: skip`); continue }
@@ -111,6 +125,24 @@ async function fetchThe() {
   process.stdout.write('\n'); return byKey
 }
 
+async function fetchUsNatl() {
+  // U.S. News National Universities ("Best Colleges") archive — wide CSV,
+  // one column per year (1984–2025). Different ranking from Best Global; U.S.-only.
+  const t = await (await fetch(USNATL_URL, { headers: { 'User-Agent': UA } })).text()
+  const lines = t.split('\n').filter((l) => l.trim())
+  const years = parseCsvLine(lines[0]).slice(1).map(Number)
+  const byKey = new Map()
+  for (const l of lines.slice(1)) {
+    const c = parseCsvLine(l)
+    const name = clean(c[0])
+    const ranks = {}
+    years.forEach((y, i) => { const v = parseInt(c[i + 1], 10); if (!Number.isNaN(v)) ranks[y] = v })
+    if (name && Object.keys(ranks).length) byKey.set(normKey(name), { name, ranks })
+  }
+  console.log(`U.S. News National: ${byKey.size} U.S. universities (${Math.min(...years)}–${Math.max(...years)})`)
+  return byKey
+}
+
 const csvCell = (v) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s }
 const toCsv = (rows, cols) => [cols.join(','), ...rows.map((r) => cols.map((c) => csvCell(r[c])).join(','))].join('\n') + '\n'
 
@@ -118,6 +150,7 @@ async function main() {
   const qsBySlug = await fetchQsEditions()
   const usnItems = await fetchUsNews()
   const theByKey = await fetchThe()
+  const natlByKey = await fetchUsNatl()
 
   const regionByCountry = new Map()
   for (const { info } of qsBySlug.values()) if (info.country && info.region) regionByCountry.set(info.country, info.region)
@@ -125,71 +158,89 @@ async function main() {
   const usnByKey = new Map()
   for (const u of usnItems) { const k = normKey(u.name); if (k && !usnByKey.has(k)) usnByKey.set(k, u) }
 
-  const usedUsn = new Set(), usedThe = new Set()
+  const usedUsn = new Set(), usedThe = new Set(), usedNatl = new Set()
   const universities = []
   let matched2 = 0
 
-  const makeRankings = (qsRanks, usn, the) => {
-    const qs = emptyYears(), usnews = emptyYears(), theR = emptyYears()
-    if (qsRanks) for (const [y, v] of Object.entries(qsRanks)) if (y in qs) qs[y] = v
-    if (usn) usnews[USN_YEAR] = usn.rank
-    if (the) for (const [y, v] of Object.entries(the.ranks)) if (y in theR) theR[y] = v
-    return { qs, usnews, the: theR }
+  // Sparse rankings — only present years are stored.
+  const makeRankings = (qsRanks, usn, the, natl) => {
+    const r = { qs: {}, usnews: {}, the: {}, usnatl: {} }
+    if (qsRanks) for (const [y, v] of Object.entries(qsRanks)) if (v != null) r.qs[y] = v
+    if (usn) r.usnews[USN_YEAR] = usn.rank
+    if (the) for (const [y, v] of Object.entries(the.ranks)) if (v != null) r.the[y] = v
+    if (natl) for (const [y, v] of Object.entries(natl.ranks)) if (v != null) r.usnatl[y] = v
+    return r
   }
 
-  // QS universities (multi-edition) — attach U.S. News & THE by name.
+  // QS universities (multi-edition) — attach U.S. News, THE, National by name.
   for (const [slug, e] of qsBySlug) {
     const info = e.info
     const key = normKey(info.name)
-    const usn = usnByKey.get(key); const the = theByKey.get(key)
+    const usn = usnByKey.get(key); const the = theByKey.get(key); const natl = natlByKey.get(key)
     if (usn) { usedUsn.add(key); matched2++ }
     if (the) usedThe.add(key)
+    if (natl) usedNatl.add(key)
     universities.push({
       id: slug, name: info.name, country: info.country, region: info.region,
       city: info.city || (usn ? usn.city : ''), description: usn ? usn.blurb : '',
       logo: info.logo, qsUrl: `https://www.topuniversities.com${info.path}`,
       ...(usn ? { usnewsUrl: usn.url } : {}), ...(the && the.url ? { theUrl: the.url } : {}),
-      rankings: makeRankings(e.ranks, usn, the),
+      rankings: makeRankings(e.ranks, usn, the, natl),
     })
   }
 
-  // U.S. News-only (also attach THE).
+  // U.S. News-only (also attach THE + National).
   for (const u of usnItems) {
     const key = normKey(u.name); if (!key || usedUsn.has(key)) continue; usedUsn.add(key)
     const the = theByKey.get(key); if (the) usedThe.add(key)
+    const natl = natlByKey.get(key); if (natl) usedNatl.add(key)
     universities.push({
       id: `usn-${slugOf(u.url) || key.replace(/\s+/g, '-')}`, name: clean(u.name), country: clean(u.country),
       region: regionByCountry.get(u.country) || '', city: clean(u.city), description: u.blurb,
-      usnewsUrl: u.url, ...(the && the.url ? { theUrl: the.url } : {}), rankings: makeRankings(null, u, the),
+      usnewsUrl: u.url, ...(the && the.url ? { theUrl: the.url } : {}), rankings: makeRankings(null, u, the, natl),
     })
   }
 
-  // THE-only.
+  // THE-only (also attach National).
   for (const [key, the] of theByKey) {
     if (usedThe.has(key)) continue
+    const natl = natlByKey.get(key); if (natl) usedNatl.add(key)
     universities.push({
       id: `the-${slugOf(the.url) || key.replace(/\s+/g, '-')}`, name: the.name, country: the.country,
       region: regionByCountry.get(the.country) || '', city: '', theUrl: the.url || undefined,
-      rankings: makeRankings(null, null, the),
+      rankings: makeRankings(null, null, the, natl),
     })
   }
 
-  const best = (u) => Math.min(u.rankings.qs[FEATURED] ?? 9e9, u.rankings.usnews[FEATURED] ?? 9e9, u.rankings.the[FEATURED] ?? 9e9)
+  // U.S. News National-only (U.S. schools not in QS/THE/Best Global).
+  for (const [key, natl] of natlByKey) {
+    if (usedNatl.has(key)) continue
+    universities.push({
+      id: `usnatl-${key.replace(/\s+/g, '-')}`, name: natl.name, country: 'United States', region: 'North America', city: '',
+      rankings: makeRankings(null, null, null, natl),
+    })
+  }
+
+  const best = (u) => Math.min(u.rankings.qs[FEATURED] ?? 9e9, u.rankings.usnews[FEATURED] ?? 9e9, u.rankings.the[FEATURED] ?? 9e9, u.rankings.usnatl[FEATURED] ?? 9e9)
   universities.sort((a, b) => best(a) - best(b))
   for (const u of universities) if (!u.description) delete u.description
 
   const qsYears = Object.keys(QS_EDITIONS).map(Number).sort((a, b) => a - b)
   const meta = {
-    years: YEARS, featuredYear: FEATURED, systems: ['qs', 'usnews', 'the'],
-    systemLabels: { qs: 'QS World University Rankings', usnews: 'U.S. News & World Report', the: 'Times Higher Education' },
-    systemShort: { qs: 'QS', usnews: 'U.S. News', the: 'THE' },
+    years: META_YEARS, featuredYear: FEATURED, systems: ['qs', 'usnews', 'the', 'usnatl'],
+    systemLabels: {
+      qs: 'QS World University Rankings', usnews: 'U.S. News Best Global', the: 'Times Higher Education',
+      usnatl: 'U.S. News National (U.S.)',
+    },
+    systemShort: { qs: 'QS', usnews: 'USN-G', the: 'THE', usnatl: 'USN-N' },
     defaultUniversity: universities[0]?.id ?? null, version: VERSION, license: 'CC-BY-4.0',
     sources: {
       qs: 'https://www.topuniversities.com/world-university-rankings',
       usnews: 'https://www.usnews.com/education/best-global-universities/rankings',
       the: 'https://www.timeshighereducation.com/world-university-rankings',
+      usnatl: 'https://github.com/frishberg/Archive-of-US-News-College-Rankings',
     },
-    coverage: `QS ${qsYears[0]}–${qsYears[qsYears.length - 1]} (no 2020); THE ${THE_FROM}–2026; U.S. News ${USN_YEAR}. ${universities.length} universities; ${matched2} matched QS↔U.S. News.`,
+    coverage: `QS ${qsYears[0]}–${qsYears[qsYears.length - 1]} (no 2020); THE ${THE_FROM}–2026; U.S. News Best Global ${USN_YEAR}; U.S. News National 1984–2025 (U.S. only). ${universities.length} universities.`,
   }
 
   await writeFile(path.join(DIR, 'universities.json'), JSON.stringify({ meta, universities }) + '\n')
@@ -201,7 +252,7 @@ async function main() {
   await writeFile(path.join(DIR, 'universities.csv'), toCsv(uniRows, ['id', 'name', 'country', 'region', 'city', 'description', 'qs_url', 'usnews_url', 'the_url']))
 
   const rankRows = []
-  for (const u of universities) for (const sys of ['qs', 'usnews', 'the']) for (const yr of YEARS) {
+  for (const u of universities) for (const sys of ['qs', 'usnews', 'the', 'usnatl']) for (const yr of META_YEARS) {
     const rk = u.rankings[sys][yr]; if (rk != null) rankRows.push({ university_id: u.id, system: sys, year: yr, rank: rk })
   }
   await writeFile(path.join(DIR, 'rankings.csv'), toCsv(rankRows, ['university_id', 'system', 'year', 'rank']))
@@ -220,7 +271,7 @@ async function main() {
           { name: 'description', type: 'string' }, { name: 'qs_url', type: 'string' }, { name: 'usnews_url', type: 'string' }, { name: 'the_url', type: 'string' } ] } },
       { name: 'rankings', path: 'rankings.csv', format: 'csv', mediatype: 'text/csv',
         schema: { foreignKeys: [{ fields: 'university_id', reference: { resource: 'universities', fields: 'id' } }], fields: [
-          { name: 'university_id', type: 'string' }, { name: 'system', type: 'string', constraints: { enum: ['qs', 'usnews', 'the'] } },
+          { name: 'university_id', type: 'string' }, { name: 'system', type: 'string', constraints: { enum: ['qs', 'usnews', 'the', 'usnatl'] } },
           { name: 'year', type: 'integer' }, { name: 'rank', type: 'integer', description: 'World rank (lower is better)' } ] } },
     ],
   }
@@ -252,8 +303,8 @@ Compilation CC-BY-4.0 — attribute "rNLKJA / Ranking Radar".
   await writeFile(path.join(DIR, 'README.md'), readme)
   await writeFile(path.join(DIR, 'LICENSE'), 'CC-BY-4.0 — https://creativecommons.org/licenses/by/4.0/\n')
 
-  const withMulti = (sys) => universities.filter((u) => YEARS.filter((y) => u.rankings[sys][y] != null).length >= 2).length
-  console.log(`\nWrote ${universities.length} universities + FAIR package\n  QS ${qsBySlug.size} (${Object.keys(QS_EDITIONS).length} editions) · U.S. News ${usnItems.length} · THE ${theByKey.size}\n  multi-year QS ${withMulti('qs')} · multi-year THE ${withMulti('the')} · matched QS↔USN ${matched2}`)
+  const withMulti = (sys) => universities.filter((u) => META_YEARS.filter((y) => u.rankings[sys][y] != null).length >= 2).length
+  console.log(`\nWrote ${universities.length} universities + FAIR package\n  QS ${qsBySlug.size} · U.S. News ${usnItems.length} · THE ${theByKey.size} · National ${natlByKey.size}\n  multi-year QS ${withMulti('qs')} · THE ${withMulti('the')} · National ${withMulti('usnatl')}`)
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })

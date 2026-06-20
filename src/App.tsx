@@ -65,11 +65,11 @@ export default function App() {
             Ranking Radar<span className="text-muted-foreground"> · {activeYear}</span>
           </h1>
           <p className="mt-3 text-lg font-light leading-relaxed">
-            Three rankings, sixteen years. <span className="text-[#ff3c3c]">See the trend, and where they disagree.</span>
+            Four rankings, four decades. <span className="text-[#ff3c3c]">See the trend, and where they disagree.</span>
           </p>
           <p className="mt-2 text-sm font-light leading-relaxed text-muted-foreground">
-            Pick a university to find it on the timeline, then click its logo for the rank trend across all three
-            systems. QS spans 2016–2027, THE 2011–2026, U.S. News 2026. Lower is better.
+            Click a university for its rank trend across four systems. QS 2016–27, THE 2011–26, U.S. News Best
+            Global 2026, and U.S. News National (U.S. only) back to 1984. Lower is better.
           </p>
         </header>
 

@@ -80,7 +80,7 @@ export default function Sidebar({
 
       <div className="space-y-4 p-4">
         {/* System toggles */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {ALL_SYSTEMS.map((s) => {
             const on = systems.includes(s)
             return (
@@ -94,7 +94,7 @@ export default function Sidebar({
                 style={on ? { borderColor: SYSTEM_COLOR[s], color: SYSTEM_COLOR[s], borderWidth: 2 } : undefined}
               >
                 <span className="size-2 rounded-full" style={{ background: on ? SYSTEM_COLOR[s] : 'transparent', border: on ? 'none' : '1.5px solid currentColor' }} />
-                {SYSTEM_SHORT[s] === 'U.S. News' ? 'USN' : SYSTEM_SHORT[s]}
+                {SYSTEM_SHORT[s]}
               </button>
             )
           })}
@@ -107,7 +107,7 @@ export default function Sidebar({
             <span className="font-medium tabular-nums text-foreground">{year}</span>
           </div>
           <Slider min={meta.years[0]} max={meta.years[meta.years.length - 1]} step={1} value={[year]} onValueChange={([v]) => onYearChange(v)} />
-          <p className="text-[9px] uppercase tracking-widest text-muted-foreground">QS 2016–2027 · THE 2011–2026 · USN 2026</p>
+          <p className="text-[9px] uppercase tracking-widest text-muted-foreground">QS 2016–27 · THE 2011–26 · USN-Global 26 · USN-National (US) 1984–2025</p>
         </div>
 
         {/* Spacing */}
@@ -143,7 +143,7 @@ export default function Sidebar({
                         <span className="flex flex-wrap gap-x-2 text-[10px] uppercase tracking-widest">
                           {ALL_SYSTEMS.map((s) =>
                             u.rankings[s][y] != null ? (
-                              <span key={s} style={{ color: SYSTEM_COLOR[s] }}>{SYSTEM_SHORT[s] === 'U.S. News' ? 'USN' : SYSTEM_SHORT[s]} #{u.rankings[s][y]}</span>
+                              <span key={s} style={{ color: SYSTEM_COLOR[s] }}>{SYSTEM_SHORT[s]} #{u.rankings[s][y]}</span>
                             ) : null,
                           )}
                         </span>

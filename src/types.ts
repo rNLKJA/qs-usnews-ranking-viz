@@ -1,4 +1,4 @@
-export type SystemKey = 'qs' | 'usnews' | 'the'
+export type SystemKey = 'qs' | 'usnews' | 'the' | 'usnatl'
 
 /** Rank by year. Value is the world rank, or null when that edition has no value. */
 export type RankByYear = Record<string, number | null>

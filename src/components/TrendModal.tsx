@@ -36,7 +36,7 @@ export default function TrendModal({ university, meta, onClose }: TrendModalProp
 
   const data = useMemo(() => {
     if (!university) return null
-    const series: Record<SystemKey, { year: number; rank: number | null }[]> = { qs: [], usnews: [], the: [] }
+    const series: Record<SystemKey, { year: number; rank: number | null }[]> = { qs: [], usnews: [], the: [], usnatl: [] }
     const ranks: number[] = []
     for (const s of ALL_SYSTEMS)
       series[s] = years.map((yr) => {

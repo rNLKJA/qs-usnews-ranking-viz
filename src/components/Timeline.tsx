@@ -19,8 +19,8 @@ interface TimelineProps {
 
 const MARGIN = { left: 200, right: 160 }
 const MIN_WIDTH = 900
-const LANE_TOP = 110
-const LANE_GAP = 230
+const LANE_TOP = 105
+const LANE_GAP = 205
 const STACK_STEP = 66
 const STACK_CAP = 3
 const REVEAL_BUFFER = 240
