@@ -28,7 +28,8 @@ interface SidebarProps {
   onToggleList: () => void
   spacing: number
   onSpacingChange: (n: number) => void
-  onLocate: (id: string) => void
+  focusedId: string | null
+  onFocus: (id: string | null) => void
 }
 
 export default function Sidebar({
@@ -44,7 +45,8 @@ export default function Sidebar({
   onToggleList,
   spacing,
   onSpacingChange,
-  onLocate,
+  focusedId,
+  onFocus,
 }: SidebarProps) {
   const y = String(year)
 
@@ -134,7 +136,7 @@ export default function Sidebar({
               <ul>
                 {list.slice(0, MAX_LIST).map((u) => (
                   <li key={u.id}>
-                    <button onClick={() => onLocate(u.id)} title="Find on the timeline" className="flex w-full items-center gap-3 px-2 py-2 text-left transition-colors duration-200 hover:bg-accent">
+                    <button onClick={() => onFocus(focusedId === u.id ? null : u.id)} title="Show only this university" aria-pressed={focusedId === u.id} className={`flex w-full items-center gap-3 px-2 py-2 text-left transition-colors duration-200 hover:bg-accent ${focusedId === u.id ? 'bg-accent ring-1 ring-foreground' : ''}`}>
                       <span className="flex h-7 w-7 shrink-0 items-center justify-center">
                         <UniversityLogo university={u} size={24} />
                       </span>

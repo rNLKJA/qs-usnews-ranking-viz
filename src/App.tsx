@@ -18,7 +18,7 @@ export default function App() {
   const [spacing, setSpacing] = useState(150)
   const [view, setView] = useState<View>('timeline')
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [locate, setLocate] = useState<{ id: string; nonce: number } | null>(null)
+  const [focusedId, setFocusedId] = useState<string | null>(null)
 
   const activeYear = year ?? meta?.featuredYear ?? (meta ? meta.years[meta.years.length - 1] : 2026)
 
@@ -35,8 +35,8 @@ export default function App() {
   }, [all, activeYear, search])
 
   const selected = all.find((u) => u.id === selectedId) ?? null
+  const focused = all.find((u) => u.id === focusedId) ?? null
   const toggleSystem = (s: SystemKey) => setSystems((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]))
-  const locateUni = (id: string) => setLocate((p) => ({ id, nonce: (p?.nonce ?? 0) + 1 }))
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -54,7 +54,8 @@ export default function App() {
           onToggleList={() => setShowList((v) => !v)}
           spacing={spacing}
           onSpacingChange={setSpacing}
-          onLocate={locateUni}
+          focusedId={focusedId}
+          onFocus={setFocusedId}
         />
       )}
 
@@ -94,19 +95,27 @@ export default function App() {
 
             {view === 'timeline' ? (
               <>
+                {focused && (
+                  <div className="mb-3 inline-flex items-center gap-3 self-start border border-foreground px-3 py-1.5 text-[11px] uppercase tracking-widest">
+                    <span>Showing only · {focused.name}</span>
+                    <button onClick={() => setFocusedId(null)} className="font-semibold hover:text-[#ff3c3c]" aria-label="Clear focus">
+                      ✕ all
+                    </button>
+                  </div>
+                )}
                 <Timeline
                   universities={sorted}
                   year={activeYear}
                   systems={systems}
                   systemLabels={meta.systemLabels}
                   pxPerRank={spacing}
-                  locate={locate}
+                  focusedId={focusedId}
                   onSelect={setSelectedId}
                 />
                 <p className="mt-3 text-[11px] uppercase tracking-widest text-muted-foreground">
-                  {all.length} universities · QS {all.filter((u) => u.rankings.qs[String(activeYear)] != null).length} · U.S. News{' '}
-                  {all.filter((u) => u.rankings.usnews[String(activeYear)] != null).length} · THE{' '}
-                  {all.filter((u) => u.rankings.the[String(activeYear)] != null).length}
+                  {focused
+                    ? `Rank axis rescaled to ${focused.name} · click another in the list, or “all” to reset`
+                    : `${all.length} universities · QS ${all.filter((u) => u.rankings.qs[String(activeYear)] != null).length} · U.S. News ${all.filter((u) => u.rankings.usnews[String(activeYear)] != null).length} · THE ${all.filter((u) => u.rankings.the[String(activeYear)] != null).length}`}
                 </p>
               </>
             ) : (
