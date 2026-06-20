@@ -1,4 +1,4 @@
-export type SystemKey = 'qs' | 'usnews'
+export type SystemKey = 'qs' | 'usnews' | 'the'
 
 /** Rank by year. Value is the world rank, or null when that edition has no value. */
 export type RankByYear = Record<string, number | null>
@@ -22,6 +22,8 @@ export interface University {
   qsUrl?: string
   /** Link to the university's U.S. News profile page. */
   usnewsUrl?: string
+  /** Link to the university's Times Higher Education profile page. */
+  theUrl?: string
   rankings: Record<SystemKey, RankByYear>
 }
 

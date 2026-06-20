@@ -33,19 +33,26 @@ Thousands-commas are stripped in rank parsing (`"1,183"` → 1183, not 1).
 The spreadsheet (`universities.csv` / `rankings.csv`) is the shareable 3rd-party
 dataset and the source of truth; `universities.json` is derived from the same run.
 
-## Known limitation — current edition only
+- **Times Higher Education** — `timeshighereducation.com/json/ranking_tables/world_university_rankings/<year>`.
+  This serves **every edition 2011–present**, so THE is the multi-year backbone.
+  Record gives rank, name, `location` (country), profile url, scores.
 
-Both APIs serve **only their current edition**, so this is a 2026 cross-system
-snapshot (verified: QS exposes a single NID; U.S. News ignores `year`/`schema`
-params). There is no official live source for per-university **history**, and
-hard-coding is disallowed. So `meta.years = [2026]`.
+## Coverage
 
-## Roadmap (data is structured to absorb these)
+- **THE: 2011–2026** (multi-year — real trends).
+- **QS & U.S. News: 2026 only** — their live APIs expose only the current edition
+  (verified: QS one NID; U.S. News ignores `year`/`schema`). No hard-coding, so
+  no synthetic history for these two.
+- `meta.years = 2011..2026`; for pre-2026 years only THE has data.
 
-1. **Historical years** — ingest an archived open dataset (e.g. Kaggle / GitHub
-   multi-year QS & THE CSVs) as additional FAIR sources, attributed, written
-   into `rankings.csv` as more `year` rows. The schema already supports it.
-2. **Times Higher Education** — its JSON isn't in the static HTML; add it via its
-   data endpoint or an archived dataset as a third `system`.
-3. **Regional view** — `region`/`country`/`city` are already in the dataset, so a
-   by-region rank-change visualisation can be built on top without new sourcing.
+## Built on this dataset
+
+- **Trend modal** — THE multi-year line + QS/U.S. News current dots + cross-system spread.
+- **Regions view** — count of each region's universities in the global top-N over
+  2011–2026 (THE), showing regional rise/fall.
+
+## To extend
+
+- Backfill QS/U.S. News history from an archived open dataset (attributed) → more
+  `year` rows in `rankings.csv`; the schema already supports it.
+- Bump `QS_NID` each year for the new QS edition.

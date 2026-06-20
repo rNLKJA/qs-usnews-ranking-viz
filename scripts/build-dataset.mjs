@@ -3,21 +3,15 @@
  * build-dataset.mjs — generate the FAIR ranking dataset + the website JSON.
  *
  * NO data is hard-coded. Everything is pulled live from official endpoints:
- *  - QS World University Rankings  (topuniversities.com REST endpoint)
- *  - U.S. News Best Global Universities  (usnews.com JSON API; needs Node fetch,
- *    curl is Cloudflare-blocked)
+ *  - QS World University Rankings      (topuniversities.com REST endpoint) — current edition
+ *  - U.S. News Best Global Universities (usnews.com JSON API; Node fetch)   — current edition
+ *  - Times Higher Education WUR         (timeshighereducation.com JSON API)  — 2011–present (multi-year!)
  *
- * Both APIs only serve their CURRENT edition, so this is a current-year
- * (2026) cross-system snapshot. Historical years and Times Higher Education are
- * documented as a backfill step (see Notes/DATA_PIPELINE.md) — they require
- * archived public datasets, not these live APIs.
+ * THE is the multi-year backbone (the QS & U.S. News APIs only serve their
+ * current edition). Systems are matched across by normalised name.
  *
- * Outputs (all under public/data/, so they are downloadable = FAIR Accessible):
- *  - universities.json   the website data
- *  - universities.csv    one row per university (info)            [FAIR]
- *  - rankings.csv         tidy long format: id, system, year, rank [FAIR]
- *  - datapackage.json     Frictionless Data descriptor + metadata  [FAIR]
- *  - README.md, LICENSE   provenance + CC-BY-4.0                   [FAIR]
+ * Outputs (public/data/, downloadable = FAIR Accessible):
+ *   universities.json · universities.csv · rankings.csv · datapackage.json · README.md · LICENSE
  *
  * Run: npm run data
  */
@@ -27,272 +21,218 @@ import path from 'node:path'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DIR = path.join(__dirname, '..', 'public', 'data')
-const QS_NID = '4153156' // QS World University Rankings 2026 edition
-const DATA_YEAR = 2026
-const YEARS = [DATA_YEAR] // current edition only; see Notes/DATA_PIPELINE.md
-const VERSION = `${DATA_YEAR}.1`
-const UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
+const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
+
+const QS_NID = '4153156'
+const CURRENT = 2026
+const THE_FROM = 2011
+const YEARS = Array.from({ length: CURRENT - THE_FROM + 1 }, (_, i) => THE_FROM + i)
+const VERSION = `${CURRENT}.2`
 
 const parseRank = (s) => {
   const m = String(s ?? '').replace(/[,\s]/g, '').match(/\d+/)
   return m ? parseInt(m[0], 10) : null
 }
 const slugOf = (p) => String(p || '').split('/').filter(Boolean).pop() || ''
-const shortNameOf = (title) => {
-  const m = title.match(/\(([^)]+)\)/)
-  if (m && m[1].length <= 8) return m[1]
-  return title.replace(/\([^)]*\)/g, '').trim().split(/\s+/).slice(0, 2).join(' ')
-}
-const normKey = (s) =>
-  String(s || '')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/\([^)]*\)/g, ' ')
-    .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .replace(/\b(universit\w*|the|of|at)\b/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
 const clean = (s) => String(s ?? '').replace(/\s+/g, ' ').trim()
+const normKey = (s) =>
+  String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/\([^)]*\)/g, ' ').replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\b(universit\w*|the|of|at)\b/g, ' ').replace(/\s+/g, ' ').trim()
+const emptyYears = () => Object.fromEntries(YEARS.map((y) => [String(y), null]))
 
 async function fetchQs() {
-  const perPage = 500
-  let page = 0
-  let total = Infinity
   const nodes = []
+  let page = 0, total = Infinity
   while (nodes.length < total && page <= 50) {
-    const url = `https://www.topuniversities.com/rankings/endpoint?nid=${QS_NID}&page=${page}&items_per_page=${perPage}&tab=indicators`
-    const res = await fetch(url, { headers: { 'User-Agent': UA, Referer: 'https://www.topuniversities.com/world-university-rankings', Accept: 'application/json' } })
-    if (!res.ok) throw new Error(`QS fetch failed: ${res.status}`)
-    const data = await res.json()
-    total = data.total_record
-    nodes.push(...data.score_nodes)
-    process.stdout.write(`\rQS: ${nodes.length}/${total}`)
-    page += 1
-    await new Promise((r) => setTimeout(r, 250))
+    const r = await fetch(`https://www.topuniversities.com/rankings/endpoint?nid=${QS_NID}&page=${page}&items_per_page=500&tab=indicators`,
+      { headers: { 'User-Agent': UA, Referer: 'https://www.topuniversities.com/world-university-rankings', Accept: 'application/json' } })
+    if (!r.ok) throw new Error('QS ' + r.status)
+    const d = await r.json(); total = d.total_record; nodes.push(...d.score_nodes)
+    process.stdout.write(`\rQS: ${nodes.length}/${total}`); page++; await new Promise((x) => setTimeout(x, 250))
   }
-  process.stdout.write('\n')
-  return nodes
+  process.stdout.write('\n'); return nodes
 }
 
 async function fetchUsNews() {
-  const items = []
-  let page = 1
-  let totalPages = 1
+  const items = []; let page = 1, totalPages = 1
   do {
-    const url = `https://www.usnews.com/education/best-global-universities/api/search?format=json&page=${page}`
-    const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json', Referer: 'https://www.usnews.com/education/best-global-universities/rankings' } })
-    if (!res.ok) {
-      if (page === 1) throw new Error(`U.S. News fetch failed: ${res.status}`)
-      break
+    const r = await fetch(`https://www.usnews.com/education/best-global-universities/api/search?format=json&page=${page}`,
+      { headers: { 'User-Agent': UA, Accept: 'application/json', Referer: 'https://www.usnews.com/education/best-global-universities/rankings' } })
+    if (!r.ok) { if (page === 1) throw new Error('USN ' + r.status); break }
+    const d = await r.json(); totalPages = d.total_pages
+    for (const it of d.items || []) {
+      const rk = (it.ranks || []).find((x) => /best global/i.test(x.label)); const rank = parseRank(rk?.value)
+      if (rank != null) items.push({ name: it.name, country: it.country_name || '', city: clean(it.city), url: it.url, rank, blurb: clean(it.blurb) })
     }
-    const data = await res.json()
-    totalPages = data.total_pages
-    for (const it of data.items || []) {
-      const rk = (it.ranks || []).find((r) => /best global/i.test(r.label))
-      const rank = parseRank(rk?.value)
-      if (rank == null) continue
-      items.push({ name: it.name, country: it.country_name || '', city: clean(it.city), url: it.url, rank, blurb: clean(it.blurb) })
-    }
-    process.stdout.write(`\rU.S. News: page ${page}/${totalPages} (${items.length})`)
-    page += 1
-    await new Promise((r) => setTimeout(r, 180))
+    process.stdout.write(`\rU.S. News: ${page}/${totalPages} (${items.length})`); page++; await new Promise((x) => setTimeout(x, 160))
   } while (page <= totalPages && page <= 300)
-  process.stdout.write('\n')
-  return items
+  process.stdout.write('\n'); return items
 }
 
-const csvCell = (v) => {
-  const s = v == null ? '' : String(v)
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+async function fetchThe() {
+  // year -> [{name, country, url, rank}]; aggregated into per-uni multi-year series.
+  const byKey = new Map()
+  for (const yr of YEARS) {
+    let d
+    try { d = await (await fetch(`https://www.timeshighereducation.com/json/ranking_tables/world_university_rankings/${yr}`, { headers: { 'User-Agent': UA, Accept: 'application/json' } })).json() }
+    catch { process.stdout.write(`\rTHE ${yr}: skip`); continue }
+    for (const it of d.data || []) {
+      const rank = parseRank(it.rank); if (rank == null) continue
+      const key = normKey(it.name); if (!key) continue
+      let e = byKey.get(key)
+      if (!e) { e = { name: clean(it.name), country: clean(it.location), url: it.url ? `https://www.timeshighereducation.com${it.url}` : '', ranks: {} }; byKey.set(key, e) }
+      if (!(yr in e.ranks) || rank < e.ranks[yr]) e.ranks[yr] = rank
+    }
+    process.stdout.write(`\rTHE: ${yr} (${byKey.size} unis)`); await new Promise((x) => setTimeout(x, 200))
+  }
+  process.stdout.write('\n'); return byKey
 }
+
+const csvCell = (v) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s }
 const toCsv = (rows, cols) => [cols.join(','), ...rows.map((r) => cols.map((c) => csvCell(r[c])).join(','))].join('\n') + '\n'
 
 async function main() {
   const nodes = await fetchQs()
   const usnItems = await fetchUsNews()
+  const theByKey = await fetchThe()
 
-  // country -> region, learned from QS (no hard-coded geography).
   const regionByCountry = new Map()
   for (const n of nodes) if (n.country && n.region) regionByCountry.set(n.country, n.region)
 
   const usnByKey = new Map()
-  for (const u of usnItems) {
-    const k = normKey(u.name)
-    if (k && !usnByKey.has(k)) usnByKey.set(k, u)
-  }
-  const usedUsn = new Set()
+  for (const u of usnItems) { const k = normKey(u.name); if (k && !usnByKey.has(k)) usnByKey.set(k, u) }
+
+  const usedUsn = new Set(), usedThe = new Set()
   const universities = []
   const seen = new Set()
-  let matched = 0
+  let matched2 = 0
 
+  const makeRankings = (qsRank, usn, the) => {
+    const qs = emptyYears(), usnews = emptyYears(), theR = emptyYears()
+    if (qsRank != null) qs[CURRENT] = qsRank
+    if (usn) usnews[CURRENT] = usn.rank
+    if (the) for (const [y, v] of Object.entries(the.ranks)) if (y in theR) theR[y] = v
+    return { qs, usnews, the: theR }
+  }
+
+  // QS universities — attach U.S. News & THE by name.
   for (const n of nodes) {
-    const slug = slugOf(n.path)
-    if (!slug || seen.has(slug)) continue
-    seen.add(slug)
-    const rank = parseRank(n.rank_display ?? n.rank)
-    if (rank == null) continue
+    const slug = slugOf(n.path); if (!slug || seen.has(slug)) continue; seen.add(slug)
+    const rank = parseRank(n.rank_display ?? n.rank); if (rank == null) continue
     const key = normKey(n.title)
-    const usn = usnByKey.get(key)
-    if (usn) {
-      usedUsn.add(key)
-      matched += 1
-    }
+    const usn = usnByKey.get(key); const the = theByKey.get(key)
+    if (usn) { usedUsn.add(key); matched2++ }
+    if (the) usedThe.add(key)
     universities.push({
-      id: slug,
-      name: clean(n.title),
-      country: clean(n.country),
-      region: clean(n.region),
-      city: clean(n.city) || (usn ? usn.city : ''),
-      description: usn ? usn.blurb : '',
-      logo: n.logo || undefined,
-      qsUrl: `https://www.topuniversities.com${n.path}`,
-      ...(usn ? { usnewsUrl: usn.url } : {}),
-      rankings: {
-        qs: { [DATA_YEAR]: rank },
-        usnews: { [DATA_YEAR]: usn ? usn.rank : null },
-      },
+      id: slug, name: clean(n.title), country: clean(n.country), region: clean(n.region),
+      city: clean(n.city) || (usn ? usn.city : ''), description: usn ? usn.blurb : '',
+      logo: n.logo || undefined, qsUrl: `https://www.topuniversities.com${n.path}`,
+      ...(usn ? { usnewsUrl: usn.url } : {}), ...(the && the.url ? { theUrl: the.url } : {}),
+      rankings: makeRankings(rank, usn, the),
     })
   }
 
-  let usnOnly = 0
+  // U.S. News-only (also attach THE).
   for (const u of usnItems) {
-    const key = normKey(u.name)
-    if (!key || usedUsn.has(key)) continue
-    usedUsn.add(key)
+    const key = normKey(u.name); if (!key || usedUsn.has(key)) continue; usedUsn.add(key)
+    const the = theByKey.get(key); if (the) usedThe.add(key)
     universities.push({
-      id: `usn-${slugOf(u.url) || key.replace(/\s+/g, '-')}`,
-      name: clean(u.name),
-      country: clean(u.country),
-      region: regionByCountry.get(u.country) || '',
-      city: clean(u.city),
-      description: u.blurb,
-      usnewsUrl: u.url,
-      rankings: { qs: { [DATA_YEAR]: null }, usnews: { [DATA_YEAR]: u.rank } },
+      id: `usn-${slugOf(u.url) || key.replace(/\s+/g, '-')}`, name: clean(u.name), country: clean(u.country),
+      region: regionByCountry.get(u.country) || '', city: clean(u.city), description: u.blurb,
+      usnewsUrl: u.url, ...(the && the.url ? { theUrl: the.url } : {}), rankings: makeRankings(null, u, the),
     })
-    usnOnly += 1
   }
 
-  const best = (u) => Math.min(u.rankings.qs[DATA_YEAR] ?? 9e9, u.rankings.usnews[DATA_YEAR] ?? 9e9)
+  // THE-only.
+  for (const [key, the] of theByKey) {
+    if (usedThe.has(key)) continue
+    universities.push({
+      id: `the-${slugOf(the.url) || key.replace(/\s+/g, '-')}`, name: the.name, country: the.country,
+      region: regionByCountry.get(the.country) || '', city: '', theUrl: the.url || undefined,
+      rankings: makeRankings(null, null, the),
+    })
+  }
+
+  const best = (u) => Math.min(u.rankings.qs[CURRENT] ?? 9e9, u.rankings.usnews[CURRENT] ?? 9e9, u.rankings.the[CURRENT] ?? 9e9)
   universities.sort((a, b) => best(a) - best(b))
   for (const u of universities) if (!u.description) delete u.description
 
   const meta = {
-    years: YEARS,
-    systems: ['qs', 'usnews'],
-    systemLabels: { qs: 'QS World University Rankings', usnews: 'U.S. News & World Report' },
-    systemShort: { qs: 'QS', usnews: 'U.S. News' },
-    defaultUniversity: universities[0]?.id ?? null,
-    version: VERSION,
-    license: 'CC-BY-4.0',
+    years: YEARS, systems: ['qs', 'usnews', 'the'],
+    systemLabels: { qs: 'QS World University Rankings', usnews: 'U.S. News & World Report', the: 'Times Higher Education' },
+    systemShort: { qs: 'QS', usnews: 'U.S. News', the: 'THE' },
+    defaultUniversity: universities[0]?.id ?? null, version: VERSION, license: 'CC-BY-4.0',
     sources: {
       qs: 'https://www.topuniversities.com/world-university-rankings',
       usnews: 'https://www.usnews.com/education/best-global-universities/rankings',
+      the: 'https://www.timeshighereducation.com/world-university-rankings',
     },
-    coverage: `QS (${nodes.length}) and U.S. News (${usnItems.length}) ${DATA_YEAR} editions; ${matched} matched across both. Current edition only — the live APIs do not expose historical years.`,
+    coverage: `THE ${THE_FROM}–${CURRENT} (multi-year); QS & U.S. News ${CURRENT} only (their live APIs expose just the current edition). ${universities.length} universities; ${matched2} matched QS↔U.S. News.`,
   }
 
-  // ---- website JSON ----
   await writeFile(path.join(DIR, 'universities.json'), JSON.stringify({ meta, universities }) + '\n')
 
-  // ---- FAIR: universities.csv (info) + rankings.csv (long) ----
   const uniRows = universities.map((u) => ({
-    id: u.id, name: u.name, country: u.country, region: u.region, city: u.city,
-    description: u.description || '', qs_url: u.qsUrl || '', usnews_url: u.usnewsUrl || '',
+    id: u.id, name: u.name, country: u.country, region: u.region, city: u.city || '',
+    description: u.description || '', qs_url: u.qsUrl || '', usnews_url: u.usnewsUrl || '', the_url: u.theUrl || '',
   }))
-  await writeFile(path.join(DIR, 'universities.csv'), toCsv(uniRows, ['id', 'name', 'country', 'region', 'city', 'description', 'qs_url', 'usnews_url']))
+  await writeFile(path.join(DIR, 'universities.csv'), toCsv(uniRows, ['id', 'name', 'country', 'region', 'city', 'description', 'qs_url', 'usnews_url', 'the_url']))
 
   const rankRows = []
-  for (const u of universities)
-    for (const sys of ['qs', 'usnews'])
-      for (const yr of YEARS) {
-        const rank = u.rankings[sys][yr]
-        if (rank != null) rankRows.push({ university_id: u.id, system: sys, year: yr, rank })
-      }
+  for (const u of universities) for (const sys of ['qs', 'usnews', 'the']) for (const yr of YEARS) {
+    const rk = u.rankings[sys][yr]; if (rk != null) rankRows.push({ university_id: u.id, system: sys, year: yr, rank: rk })
+  }
   await writeFile(path.join(DIR, 'rankings.csv'), toCsv(rankRows, ['university_id', 'system', 'year', 'rank']))
 
-  // ---- FAIR: Frictionless datapackage descriptor ----
   const datapackage = {
-    name: 'world-university-rankings',
-    title: 'World University Rankings — QS & U.S. News',
-    description: meta.coverage,
-    version: VERSION,
+    name: 'world-university-rankings', title: 'World University Rankings — QS, U.S. News & Times Higher Education',
+    description: meta.coverage, version: VERSION,
     licenses: [{ name: 'CC-BY-4.0', path: 'https://creativecommons.org/licenses/by/4.0/', title: 'Creative Commons Attribution 4.0' }],
     homepage: 'https://github.com/rNLKJA/qs-usnews-ranking-viz',
-    sources: [
-      { title: 'QS World University Rankings', path: meta.sources.qs },
-      { title: 'U.S. News Best Global Universities', path: meta.sources.usnews },
-    ],
+    sources: Object.entries(meta.sources).map(([k, v]) => ({ title: meta.systemLabels[k], path: v })),
     resources: [
-      {
-        name: 'universities', path: 'universities.csv', format: 'csv', mediatype: 'text/csv',
+      { name: 'universities', path: 'universities.csv', format: 'csv', mediatype: 'text/csv',
         schema: { primaryKey: 'id', fields: [
-          { name: 'id', type: 'string', description: 'Stable identifier (QS profile slug, or usn-<slug>)' },
-          { name: 'name', type: 'string' }, { name: 'country', type: 'string' },
+          { name: 'id', type: 'string' }, { name: 'name', type: 'string' }, { name: 'country', type: 'string' },
           { name: 'region', type: 'string' }, { name: 'city', type: 'string', title: 'Location' },
-          { name: 'description', type: 'string' }, { name: 'qs_url', type: 'string', format: 'uri' },
-          { name: 'usnews_url', type: 'string', format: 'uri' },
-        ] },
-      },
-      {
-        name: 'rankings', path: 'rankings.csv', format: 'csv', mediatype: 'text/csv',
+          { name: 'description', type: 'string' }, { name: 'qs_url', type: 'string' }, { name: 'usnews_url', type: 'string' }, { name: 'the_url', type: 'string' } ] } },
+      { name: 'rankings', path: 'rankings.csv', format: 'csv', mediatype: 'text/csv',
         schema: { foreignKeys: [{ fields: 'university_id', reference: { resource: 'universities', fields: 'id' } }], fields: [
-          { name: 'university_id', type: 'string' },
-          { name: 'system', type: 'string', constraints: { enum: ['qs', 'usnews'] } },
-          { name: 'year', type: 'integer' }, { name: 'rank', type: 'integer', description: 'World rank (lower is better)' },
-        ] },
-      },
+          { name: 'university_id', type: 'string' }, { name: 'system', type: 'string', constraints: { enum: ['qs', 'usnews', 'the'] } },
+          { name: 'year', type: 'integer' }, { name: 'rank', type: 'integer', description: 'World rank (lower is better)' } ] } },
     ],
   }
   await writeFile(path.join(DIR, 'datapackage.json'), JSON.stringify(datapackage, null, 2) + '\n')
 
-  // ---- FAIR: README + LICENSE ----
-  const readme = `# World University Rankings — QS & U.S. News (${VERSION})
+  const readme = `# World University Rankings — QS, U.S. News & Times Higher Education (${VERSION})
 
-A tidy, openly-licensed dataset of world university rankings, built for trend and
-cross-system comparison. **${universities.length}** universities.
+Openly-licensed, tidy dataset built for trend & cross-system comparison. **${universities.length}** universities.
 
 ## Files
-- \`universities.csv\` — one row per university: id, name, country, region, city (location), description, profile links.
-- \`rankings.csv\` — tidy long format: \`university_id, system, year, rank\` (lower rank = better).
-- \`universities.json\` — the same data as nested JSON (used by the web app).
-- \`datapackage.json\` — [Frictionless](https://frictionlessdata.io/) descriptor with field schemas.
+- \`universities.csv\` — one row per university (id, name, country, region, city, description, profile links).
+- \`rankings.csv\` — tidy long format: \`university_id, system, year, rank\` (lower = better).
+- \`universities.json\` — nested JSON used by the web app.
+- \`datapackage.json\` — Frictionless descriptor.
 
 ## Coverage
 ${meta.coverage}
 
 ## FAIR
-- **Findable** — stable per-university \`id\`; versioned (\`${VERSION}\`); datapackage metadata.
-- **Accessible** — open CSV/JSON over HTTPS, no auth.
-- **Interoperable** — tidy long format, Frictionless schema, normalised country→region.
-- **Reusable** — CC-BY-4.0 with documented provenance below.
+- **Findable**: stable \`id\`, version \`${VERSION}\`, datapackage metadata.
+- **Accessible**: open CSV/JSON over HTTPS, no auth.
+- **Interoperable**: tidy long format, Frictionless schema, country→region.
+- **Reusable**: CC-BY-4.0, provenance below; generated by \`scripts/build-dataset.mjs\`, no hand-entered values.
 
-## Provenance
-Generated by \`scripts/build-dataset.mjs\` directly from the official endpoints
-(QS: ${meta.sources.qs}; U.S. News: ${meta.sources.usnews}). No values are
-hand-entered. Historical years and Times Higher Education are not yet included —
-the live APIs only serve the current edition; see \`Notes/DATA_PIPELINE.md\`.
-
-## Citation
-QS data © Quacquarelli Symonds; U.S. News data © U.S. News & World Report. This
-compilation is licensed CC-BY-4.0 — attribute "rNLKJA / Ranking Radar".
+## Sources
+QS © Quacquarelli Symonds · U.S. News © U.S. News & World Report · THE © Times Higher Education.
+Compilation CC-BY-4.0 — attribute "rNLKJA / Ranking Radar".
 `
   await writeFile(path.join(DIR, 'README.md'), readme)
-  await writeFile(
-    path.join(DIR, 'LICENSE'),
-    'This dataset is licensed under the Creative Commons Attribution 4.0 International License (CC-BY-4.0).\nhttps://creativecommons.org/licenses/by/4.0/\n',
-  )
+  await writeFile(path.join(DIR, 'LICENSE'), 'CC-BY-4.0 — https://creativecommons.org/licenses/by/4.0/\n')
 
-  console.log(
-    `\nWrote ${universities.length} universities + FAIR package → ${DIR}\n` +
-      `  QS ${nodes.length} · U.S. News ${usnItems.length} · matched ${matched} · U.S. News-only ${usnOnly}\n` +
-      `  files: universities.json, universities.csv, rankings.csv, datapackage.json, README.md, LICENSE`,
-  )
+  const withThe = universities.filter((u) => YEARS.some((y) => u.rankings.the[y] != null)).length
+  console.log(`\nWrote ${universities.length} universities + FAIR package\n  QS ${nodes.length} · U.S. News ${usnItems.length} · THE ${theByKey.size} (multi-year) · with-THE ${withThe} · matched QS↔USN ${matched2}`)
 }
 
-main().catch((e) => {
-  console.error(e)
-  process.exit(1)
-})
+main().catch((e) => { console.error(e); process.exit(1) })
