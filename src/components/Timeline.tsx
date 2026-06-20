@@ -135,13 +135,12 @@ export default function Timeline({ universities, year, systems, systemLabels, px
               .map(({ uni, rank, offset }) => {
                 const cx = x(rank)
                 const cy = laneY(system) - offset * STACK_STEP
-                const ring = focused ? focusColor(focusedIds, uni.id) : undefined
                 return (
                   <div key={`${system}-${uni.id}`} className="absolute" style={{ left: cx, top: cy }}>
                     <HoverCard openDelay={100} closeDelay={80}>
                       <HoverCardTrigger asChild>
                         <button type="button" onClick={() => onSelect(uni.id)} className="absolute flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 p-1.5 text-center transition-colors duration-200 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`${uni.name}, ${systemLabels[system]} rank ${rank} in ${year}`}>
-                          <span className="relative flex h-12 items-center justify-center rounded-lg" style={ring ? { boxShadow: `0 0 0 2px ${ring}` } : undefined}>
+                          <span className="relative flex h-12 items-center justify-center">
                             <UniversityLogo university={uni} size={40} />
                             <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full px-1.5 py-px text-[10px] font-semibold text-white ring-2 ring-card" style={{ background: SYSTEM_COLOR[system] }}>#{rank}</span>
                           </span>

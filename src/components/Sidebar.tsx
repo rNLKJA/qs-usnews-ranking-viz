@@ -144,7 +144,7 @@ export default function Sidebar({
                         )}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-foreground">{u.name}</span>
+                        <span className="block text-sm font-medium leading-tight text-foreground">{u.name}</span>
                         <span className="flex flex-wrap gap-x-2 text-[10px] uppercase tracking-widest">
                           {ALL_SYSTEMS.map((s) =>
                             u.rankings[s][y] != null ? (
