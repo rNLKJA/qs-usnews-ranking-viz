@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { FiSearch, FiGithub, FiCoffee, FiDownload } from 'react-icons/fi'
 import type { DatasetMeta, SystemKey, University } from '@/types'
-import { ALL_SYSTEMS, SYSTEM_COLOR, SYSTEM_SHORT } from '@/systems'
+import { ALL_SYSTEMS, SYSTEM_COLOR, SYSTEM_SHORT, focusColor } from '@/systems'
 import UniversityLogo from './UniversityLogo'
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
@@ -28,8 +28,8 @@ interface SidebarProps {
   onToggleList: () => void
   spacing: number
   onSpacingChange: (n: number) => void
-  focusedId: string | null
-  onFocus: (id: string | null) => void
+  focusedIds: string[]
+  onToggleFocus: (id: string) => void
 }
 
 export default function Sidebar({
@@ -45,8 +45,8 @@ export default function Sidebar({
   onToggleList,
   spacing,
   onSpacingChange,
-  focusedId,
-  onFocus,
+  focusedIds,
+  onToggleFocus,
 }: SidebarProps) {
   const y = String(year)
 
@@ -136,9 +136,12 @@ export default function Sidebar({
               <ul>
                 {list.slice(0, MAX_LIST).map((u) => (
                   <li key={u.id}>
-                    <button onClick={() => onFocus(focusedId === u.id ? null : u.id)} title="Show only this university" aria-pressed={focusedId === u.id} className={`flex w-full items-center gap-3 px-2 py-2 text-left transition-colors duration-200 hover:bg-accent ${focusedId === u.id ? 'bg-accent ring-1 ring-foreground' : ''}`}>
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center">
+                    <button onClick={() => onToggleFocus(u.id)} title="Add / remove from comparison" aria-pressed={focusedIds.includes(u.id)} className={`flex w-full items-center gap-3 px-2 py-2 text-left transition-colors duration-200 hover:bg-accent ${focusedIds.includes(u.id) ? 'bg-accent' : ''}`}>
+                      <span className="relative flex h-7 w-7 shrink-0 items-center justify-center">
                         <UniversityLogo university={u} size={24} />
+                        {focusedIds.includes(u.id) && (
+                          <span className="absolute -left-1 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full" style={{ background: focusColor(focusedIds, u.id) }} />
+                        )}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-foreground">{u.name}</span>

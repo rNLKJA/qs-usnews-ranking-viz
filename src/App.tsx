@@ -4,7 +4,7 @@ import Sidebar from '@/components/Sidebar'
 import Timeline from '@/components/Timeline'
 import TrendModal from '@/components/TrendModal'
 import RegionalView from '@/components/RegionalView'
-import { ALL_SYSTEMS } from '@/systems'
+import { ALL_SYSTEMS, focusColor } from '@/systems'
 import type { SystemKey } from '@/types'
 
 type View = 'timeline' | 'regions'
@@ -18,7 +18,7 @@ export default function App() {
   const [spacing, setSpacing] = useState(150)
   const [view, setView] = useState<View>('timeline')
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [focusedId, setFocusedId] = useState<string | null>(null)
+  const [focusedIds, setFocusedIds] = useState<string[]>([])
 
   const activeYear = year ?? meta?.featuredYear ?? (meta ? meta.years[meta.years.length - 1] : 2026)
 
@@ -35,8 +35,9 @@ export default function App() {
   }, [all, activeYear, search])
 
   const selected = all.find((u) => u.id === selectedId) ?? null
-  const focused = all.find((u) => u.id === focusedId) ?? null
+  const focusedUnis = focusedIds.map((id) => all.find((u) => u.id === id)).filter((u): u is NonNullable<typeof u> => !!u)
   const toggleSystem = (s: SystemKey) => setSystems((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]))
+  const toggleFocus = (id: string) => setFocusedIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -54,8 +55,8 @@ export default function App() {
           onToggleList={() => setShowList((v) => !v)}
           spacing={spacing}
           onSpacingChange={setSpacing}
-          focusedId={focusedId}
-          onFocus={setFocusedId}
+          focusedIds={focusedIds}
+          onToggleFocus={toggleFocus}
         />
       )}
 
@@ -95,12 +96,16 @@ export default function App() {
 
             {view === 'timeline' ? (
               <>
-                {focused && (
-                  <div className="mb-3 inline-flex items-center gap-3 self-start border border-foreground px-3 py-1.5 text-[11px] uppercase tracking-widest">
-                    <span>Showing only · {focused.name}</span>
-                    <button onClick={() => setFocusedId(null)} className="font-semibold hover:text-[#ff3c3c]" aria-label="Clear focus">
-                      ✕ all
-                    </button>
+                {focusedUnis.length > 0 && (
+                  <div className="mb-3 flex flex-wrap items-center gap-2 self-start border border-foreground px-3 py-1.5 text-[11px] uppercase tracking-widest">
+                    <span className="text-muted-foreground">Comparing</span>
+                    {focusedUnis.map((u) => (
+                      <button key={u.id} onClick={() => toggleFocus(u.id)} className="inline-flex items-center gap-1.5 hover:line-through" title="Remove">
+                        <span className="size-2.5 rounded-full" style={{ background: focusColor(focusedIds, u.id) }} />
+                        {u.name}
+                      </button>
+                    ))}
+                    <button onClick={() => setFocusedIds([])} className="ml-1 font-semibold hover:text-[#ff3c3c]" aria-label="Clear all">✕ all</button>
                   </div>
                 )}
                 <Timeline
@@ -109,13 +114,13 @@ export default function App() {
                   systems={systems}
                   systemLabels={meta.systemLabels}
                   pxPerRank={spacing}
-                  focusedId={focusedId}
+                  focusedIds={focusedIds}
                   onSelect={setSelectedId}
                 />
                 <p className="mt-3 text-[11px] uppercase tracking-widest text-muted-foreground">
-                  {focused
-                    ? `Rank axis rescaled to ${focused.name} · click another in the list, or “all” to reset`
-                    : `${all.length} universities · QS ${all.filter((u) => u.rankings.qs[String(activeYear)] != null).length} · U.S. News ${all.filter((u) => u.rankings.usnews[String(activeYear)] != null).length} · THE ${all.filter((u) => u.rankings.the[String(activeYear)] != null).length}`}
+                  {focusedUnis.length > 0
+                    ? `Comparing ${focusedUnis.length} · axis rescaled to fit · click more in the list, or “all” to reset`
+                    : `${all.length} universities · click schools in the list to compare · QS ${all.filter((u) => u.rankings.qs[String(activeYear)] != null).length} · U.S. News ${all.filter((u) => u.rankings.usnews[String(activeYear)] != null).length} · THE ${all.filter((u) => u.rankings.the[String(activeYear)] != null).length}`}
                 </p>
               </>
             ) : (

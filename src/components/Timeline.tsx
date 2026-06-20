@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { scaleLinear } from 'd3-scale'
 import { FiExternalLink, FiBarChart2 } from 'react-icons/fi'
 import type { SystemKey, University } from '@/types'
-import { ALL_SYSTEMS, SYSTEM_COLOR, SYSTEM_SHORT, profileUrl } from '@/systems'
+import { ALL_SYSTEMS, SYSTEM_COLOR, SYSTEM_SHORT, profileUrl, focusColor } from '@/systems'
 import UniversityLogo from './UniversityLogo'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { Separator } from '@/components/ui/separator'
@@ -13,8 +13,8 @@ interface TimelineProps {
   systems: SystemKey[]
   systemLabels: Record<SystemKey, string>
   pxPerRank: number
-  /** When set, show only this university and rescale the axis to fit it. */
-  focusedId: string | null
+  /** Schools being compared. When non-empty, show only these and rescale to fit. */
+  focusedIds: string[]
   onSelect: (id: string) => void
 }
 
@@ -26,35 +26,23 @@ const STACK_STEP = 66
 const STACK_CAP = 3
 const REVEAL_BUFFER = 240
 
-export default function Timeline({ universities, year, systems, systemLabels, pxPerRank, focusedId, onSelect }: TimelineProps) {
+export default function Timeline({ universities, year, systems, systemLabels, pxPerRank, focusedIds, onSelect }: TimelineProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const [revealRank, setRevealRank] = useState(60)
   const [containerW, setContainerW] = useState(960)
   const active = ALL_SYSTEMS.filter((s) => systems.includes(s))
   const laneY = (s: SystemKey) => LANE_TOP + active.indexOf(s) * LANE_GAP
   const HEIGHT = LANE_TOP + active.length * LANE_GAP
-
-  const focusUni = focusedId ? universities.find((u) => u.id === focusedId) ?? null : null
-  const focused = !!focusUni
+  const focused = focusedIds.length > 0
 
   const { laid, domain, chartWidth } = useMemo(() => {
     const y = String(year)
-    if (focusUni) {
-      const laid: Record<string, { uni: University; rank: number; offset: number }[]> = {}
-      const vals: number[] = []
-      for (const s of active) {
-        const rank = focusUni.rankings[s][y]
-        if (rank != null) { laid[s] = [{ uni: focusUni, rank, offset: 0 }]; vals.push(rank) } else laid[s] = []
-      }
-      const min = vals.length ? Math.min(...vals) : 1
-      const max = vals.length ? Math.max(...vals) : 1
-      const pad = min === max ? Math.max(1, Math.round(min * 0.15)) : Math.max(1, Math.round((max - min) * 0.35))
-      return { laid, domain: [Math.max(1, min - pad), max + pad] as [number, number], chartWidth: containerW }
-    }
+    const pool = focused ? universities.filter((u) => focusedIds.includes(u.id)) : universities
     let maxRank = 1
+    let minRank = Infinity
     const laid: Record<string, { uni: University; rank: number; offset: number }[]> = {}
     for (const system of active) {
-      const points = universities
+      const points = pool
         .map((uni) => ({ uni, rank: uni.rankings[system][y] }))
         .filter((p): p is { uni: University; rank: number } => p.rank != null)
         .sort((a, b) => a.rank - b.rank)
@@ -65,10 +53,16 @@ export default function Timeline({ universities, year, systems, systemLabels, px
         seen.set(p.rank, count + 1)
         laid[system].push({ ...p, offset: Math.min(count, STACK_CAP) })
         if (p.rank > maxRank) maxRank = p.rank
+        if (p.rank < minRank) minRank = p.rank
       }
     }
+    if (focused) {
+      if (minRank === Infinity) { minRank = 1; maxRank = 1 }
+      const pad = minRank === maxRank ? Math.max(1, Math.round(minRank * 0.15)) : Math.max(1, Math.round((maxRank - minRank) * 0.3))
+      return { laid, domain: [Math.max(1, minRank - pad), maxRank + pad] as [number, number], chartWidth: containerW }
+    }
     return { laid, domain: [1, maxRank] as [number, number], chartWidth: Math.max(MIN_WIDTH, MARGIN.left + maxRank * pxPerRank + MARGIN.right) }
-  }, [universities, year, active.join(), focusedId, containerW, pxPerRank])
+  }, [universities, year, active.join(), focusedIds.join(), containerW, pxPerRank])
 
   const x = useMemo(() => scaleLinear().domain(domain).range([MARGIN.left, chartWidth - MARGIN.right]), [domain, chartWidth])
 
@@ -84,7 +78,7 @@ export default function Timeline({ universities, year, systems, systemLabels, px
     const ro = new ResizeObserver(update)
     ro.observe(el)
     return () => { el.removeEventListener('scroll', update); ro.disconnect() }
-  }, [x, year, systems, focusedId])
+  }, [x, year, systems, focusedIds.join()])
 
   const ticks = useMemo(() => {
     if (focused) return x.ticks(6).map((t) => Math.round(t)).filter((t, i, a) => t >= 1 && a.indexOf(t) === i)
@@ -93,9 +87,18 @@ export default function Timeline({ universities, year, systems, systemLabels, px
     return t
   }, [focused, x, domain])
 
-  const focusLine = focused
-    ? active.map((s) => { const r = focusUni!.rankings[s][String(year)]; return r != null ? `${x(r)},${laneY(s)}` : null }).filter(Boolean).join(' ')
-    : ''
+  const connectors = useMemo(() => {
+    if (!focused) return []
+    const y = String(year)
+    return focusedIds
+      .map((id) => {
+        const uni = universities.find((u) => u.id === id)
+        if (!uni) return null
+        const pts = active.map((s) => { const r = uni.rankings[s][y]; return r != null ? `${x(r)},${laneY(s)}` : null }).filter(Boolean)
+        return pts.length > 1 ? { id, color: focusColor(focusedIds, id), points: pts.join(' ') } : null
+      })
+      .filter((c): c is { id: string; color: string; points: string } => !!c)
+  }, [focused, focusedIds.join(), universities, year, x, active.join()])
 
   const totalShown = active.reduce((n, s) => n + laid[s].filter((p) => focused || p.rank <= revealRank).length, 0)
   const totalAll = active.reduce((n, s) => n + laid[s].length, 0)
@@ -121,7 +124,9 @@ export default function Timeline({ universities, year, systems, systemLabels, px
             {active.map((system) => (
               <line key={system} x1={MARGIN.left} x2={chartWidth - MARGIN.right} y1={laneY(system)} y2={laneY(system)} stroke={SYSTEM_COLOR[system]} strokeOpacity={0.3} strokeWidth={1.5} />
             ))}
-            {focused && focusLine && <polyline points={focusLine} fill="none" stroke="var(--color-muted-foreground)" strokeWidth={2} strokeDasharray="4 4" opacity={0.5} />}
+            {connectors.map((c) => (
+              <polyline key={c.id} points={c.points} fill="none" stroke={c.color} strokeWidth={2} strokeDasharray="5 4" opacity={0.7} />
+            ))}
           </svg>
 
           {active.map((system) =>
@@ -130,12 +135,13 @@ export default function Timeline({ universities, year, systems, systemLabels, px
               .map(({ uni, rank, offset }) => {
                 const cx = x(rank)
                 const cy = laneY(system) - offset * STACK_STEP
+                const ring = focused ? focusColor(focusedIds, uni.id) : undefined
                 return (
                   <div key={`${system}-${uni.id}`} className="absolute" style={{ left: cx, top: cy }}>
                     <HoverCard openDelay={100} closeDelay={80}>
                       <HoverCardTrigger asChild>
                         <button type="button" onClick={() => onSelect(uni.id)} className="absolute flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 p-1.5 text-center transition-colors duration-200 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`${uni.name}, ${systemLabels[system]} rank ${rank} in ${year}`}>
-                          <span className="relative flex h-12 items-center justify-center">
+                          <span className="relative flex h-12 items-center justify-center rounded-lg" style={ring ? { boxShadow: `0 0 0 2px ${ring}` } : undefined}>
                             <UniversityLogo university={uni} size={40} />
                             <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full px-1.5 py-px text-[10px] font-semibold text-white ring-2 ring-card" style={{ background: SYSTEM_COLOR[system] }}>#{rank}</span>
                           </span>
@@ -175,7 +181,7 @@ export default function Timeline({ universities, year, systems, systemLabels, px
 
           {isEmpty && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
-              <p className="text-sm font-medium text-foreground">{focused ? `No ${year} ranking for ${focusUni!.name}` : `No ranking data for ${year}`}</p>
+              <p className="text-sm font-medium text-foreground">{focused ? `No ${year} ranking for the selected schools` : `No ranking data for ${year}`}</p>
               <p className="max-w-xs text-xs text-muted-foreground">Drag the year to one with data.</p>
             </div>
           )}
