@@ -36,7 +36,12 @@ export default function TrendModal({ university, meta, onClose }: TrendModalProp
 
   const data = useMemo(() => {
     if (!university) return null
-    const series: Record<SystemKey, { year: number; rank: number | null }[]> = { qs: [], usnews: [], the: [], usnatl: [] }
+    const series: Record<SystemKey, { year: number; rank: number | null }[]> = {
+      qs: [],
+      usnews: [],
+      the: [],
+      usnatl: [],
+    }
     const ranks: number[] = []
     for (const s of ALL_SYSTEMS)
       series[s] = years.map((yr) => {
@@ -50,17 +55,25 @@ export default function TrendModal({ university, meta, onClose }: TrendModalProp
   const x = useMemo(() => {
     const lo = years[0]
     const hi = years[years.length - 1]
-    return scaleLinear().domain(lo === hi ? [lo - 1, hi + 1] : [lo, hi]).range([M.left, W - M.right])
+    return scaleLinear()
+      .domain(lo === hi ? [lo - 1, hi + 1] : [lo, hi])
+      .range([M.left, W - M.right])
   }, [years])
   const y = useMemo(() => {
     const lo = data?.lo ?? 1
     const hi = data?.hi ?? 50
     const pad = Math.max(1, Math.round((hi - lo) * 0.12))
-    return scaleLinear().domain([Math.max(1, lo - pad), hi + pad]).range([M.top, H - M.bottom])
+    return scaleLinear()
+      .domain([Math.max(1, lo - pad), hi + pad])
+      .range([M.top, H - M.bottom])
   }, [data])
 
   const lineGen = useMemo(
-    () => line<{ year: number; rank: number | null }>().defined((d) => d.rank != null).x((d) => x(d.year)).y((d) => y(d.rank as number)),
+    () =>
+      line<{ year: number; rank: number | null }>()
+        .defined((d) => d.rank != null)
+        .x((d) => x(d.year))
+        .y((d) => y(d.rank as number)),
     [x, y],
   )
 
@@ -73,9 +86,12 @@ export default function TrendModal({ university, meta, onClose }: TrendModalProp
               <div className="flex items-center gap-3">
                 <UniversityLogo university={university} size={40} />
                 <div className="text-left">
-                  <DialogTitle className="text-lg font-medium tracking-tight">{university.name}</DialogTitle>
+                  <DialogTitle className="text-lg font-medium tracking-tight">
+                    {university.name}
+                  </DialogTitle>
                   <DialogDescription className="text-[11px] uppercase tracking-widest">
-                    {[university.city, university.country].filter(Boolean).join(' · ')} · {years[0]}–{latest}
+                    {[university.city, university.country].filter(Boolean).join(' · ')} · {years[0]}
+                    –{latest}
                   </DialogDescription>
                 </div>
               </div>
@@ -84,34 +100,84 @@ export default function TrendModal({ university, meta, onClose }: TrendModalProp
             <div className="flex flex-wrap gap-x-5 gap-y-2 text-[11px] uppercase tracking-widest text-muted-foreground">
               {ALL_SYSTEMS.map((s) => (
                 <span key={s} className="inline-flex items-center gap-2">
-                  <span className="inline-block size-3 rounded-full" style={{ background: SYSTEM_COLOR[s] }} />
+                  <span
+                    className="inline-block size-3 rounded-full"
+                    style={{ background: SYSTEM_COLOR[s] }}
+                  />
                   {meta.systemLabels[s]}
                 </span>
               ))}
             </div>
 
-            <svg width="100%" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Rank trend for ${university.name}`}>
+            <svg
+              width="100%"
+              viewBox={`0 0 ${W} ${H}`}
+              role="img"
+              aria-label={`Rank trend for ${university.name}`}
+            >
               {y.ticks(6).map((t) => (
                 <g key={t}>
-                  <line x1={M.left} x2={W - M.right} y1={y(t)} y2={y(t)} className="stroke-border" />
-                  <text x={M.left - 10} y={y(t) + 4} textAnchor="end" className="fill-muted-foreground text-[11px]">#{t}</text>
+                  <line
+                    x1={M.left}
+                    x2={W - M.right}
+                    y1={y(t)}
+                    y2={y(t)}
+                    className="stroke-border"
+                  />
+                  <text
+                    x={M.left - 10}
+                    y={y(t) + 4}
+                    textAnchor="end"
+                    className="fill-muted-foreground text-[11px]"
+                  >
+                    #{t}
+                  </text>
                 </g>
               ))}
               {years.map((yr, i) => {
                 const show = (yr - years[0]) % 3 === 0 || i === years.length - 1
                 return (
                   <g key={yr}>
-                    <line x1={x(yr)} x2={x(yr)} y1={H - M.bottom} y2={H - M.bottom + 5} className="stroke-border" />
-                    {show && <text x={x(yr)} y={H - M.bottom + 20} textAnchor="middle" className="fill-muted-foreground text-[11px]">{yr}</text>}
+                    <line
+                      x1={x(yr)}
+                      x2={x(yr)}
+                      y1={H - M.bottom}
+                      y2={H - M.bottom + 5}
+                      className="stroke-border"
+                    />
+                    {show && (
+                      <text
+                        x={x(yr)}
+                        y={H - M.bottom + 20}
+                        textAnchor="middle"
+                        className="fill-muted-foreground text-[11px]"
+                      >
+                        {yr}
+                      </text>
+                    )}
                   </g>
                 )
               })}
 
               {/* cross-system spread per year */}
               {years.map((yr) => {
-                const rs = ALL_SYSTEMS.map((s) => university.rankings[s][String(yr)]).filter((r): r is number => r != null)
+                const rs = ALL_SYSTEMS.map((s) => university.rankings[s][String(yr)]).filter(
+                  (r): r is number => r != null,
+                )
                 if (rs.length < 2) return null
-                return <line key={`sp-${yr}`} x1={x(yr)} x2={x(yr)} y1={y(Math.min(...rs))} y2={y(Math.max(...rs))} stroke="var(--color-muted-foreground)" strokeWidth={10} strokeLinecap="round" opacity={0.18} />
+                return (
+                  <line
+                    key={`sp-${yr}`}
+                    x1={x(yr)}
+                    x2={x(yr)}
+                    y1={y(Math.min(...rs))}
+                    y2={y(Math.max(...rs))}
+                    stroke="var(--color-muted-foreground)"
+                    strokeWidth={10}
+                    strokeLinecap="round"
+                    opacity={0.18}
+                  />
+                )
               })}
 
               {/* trend line + points per system */}
@@ -121,16 +187,43 @@ export default function TrendModal({ university, meta, onClose }: TrendModalProp
                 const single = present.length <= 1
                 return (
                   <g key={s}>
-                    {present.length > 1 && <path d={lineGen(pts) ?? undefined} fill="none" stroke={SYSTEM_COLOR[s]} strokeWidth={2.5} strokeOpacity={0.85} />}
+                    {present.length > 1 && (
+                      <path
+                        d={lineGen(pts) ?? undefined}
+                        fill="none"
+                        stroke={SYSTEM_COLOR[s]}
+                        strokeWidth={2.5}
+                        strokeOpacity={0.85}
+                      />
+                    )}
                     {pts.map((p) => {
                       if (p.rank == null) return null
                       const labelled = single || p.year === latest
                       return (
                         <g key={`${s}-${p.year}`}>
-                          <circle cx={x(p.year)} cy={y(p.rank)} r={labelled ? 13 : 4.5} fill={SYSTEM_COLOR[s]} stroke="white" strokeWidth={labelled ? 2 : 1}>
-                            <title>{meta.systemLabels[s]} {p.year}: #{p.rank}</title>
+                          <circle
+                            cx={x(p.year)}
+                            cy={y(p.rank)}
+                            r={labelled ? 13 : 4.5}
+                            fill={SYSTEM_COLOR[s]}
+                            stroke="white"
+                            strokeWidth={labelled ? 2 : 1}
+                          >
+                            <title>
+                              {meta.systemLabels[s]} {p.year}: #{p.rank}
+                            </title>
                           </circle>
-                          {labelled && <text x={x(p.year)} y={y(p.rank)} textAnchor="middle" dominantBaseline="central" className="fill-white text-[10px] font-semibold">{p.rank}</text>}
+                          {labelled && (
+                            <text
+                              x={x(p.year)}
+                              y={y(p.rank)}
+                              textAnchor="middle"
+                              dominantBaseline="central"
+                              className="fill-white text-[10px] font-semibold"
+                            >
+                              {p.rank}
+                            </text>
+                          )}
                         </g>
                       )
                     })}
@@ -140,14 +233,22 @@ export default function TrendModal({ university, meta, onClose }: TrendModalProp
             </svg>
 
             {university.description && (
-              <p className="max-h-28 overflow-y-auto text-sm font-light leading-relaxed text-muted-foreground">{university.description}</p>
+              <p className="max-h-28 overflow-y-auto text-sm font-light leading-relaxed text-muted-foreground">
+                {university.description}
+              </p>
             )}
 
             <div className="flex flex-wrap gap-3">
               {ALL_SYSTEMS.map((s) => {
                 const url = profileUrl(university, s)
                 return url ? (
-                  <a key={s} href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border border-border px-4 py-2 text-[11px] uppercase tracking-widest transition-colors duration-200 hover:bg-foreground hover:text-background">
+                  <a
+                    key={s}
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 border border-border px-4 py-2 text-[11px] uppercase tracking-widest transition-colors duration-200 hover:bg-foreground hover:text-background"
+                  >
                     <FiExternalLink className="size-3.5" /> {SYSTEM_SHORT[s]} page
                   </a>
                 ) : null

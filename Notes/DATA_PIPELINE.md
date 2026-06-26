@@ -22,13 +22,13 @@ Thousands-commas are stripped in rank parsing (`"1,183"` → 1183, not 1).
 
 ## Outputs (all under `public/data/`, downloadable = FAIR Accessible)
 
-| file | what |
-|------|------|
-| `universities.json` | website data (nested) |
-| `universities.csv`  | one row per university: id, name, country, region, city, description, links |
-| `rankings.csv`      | tidy long format: `university_id, system, year, rank` |
-| `datapackage.json`  | Frictionless descriptor with field schemas |
-| `README.md`, `LICENSE` | provenance + CC-BY-4.0 |
+| file                   | what                                                                        |
+| ---------------------- | --------------------------------------------------------------------------- |
+| `universities.json`    | website data (nested)                                                       |
+| `universities.csv`     | one row per university: id, name, country, region, city, description, links |
+| `rankings.csv`         | tidy long format: `university_id, system, year, rank`                       |
+| `datapackage.json`     | Frictionless descriptor with field schemas                                  |
+| `README.md`, `LICENSE` | provenance + CC-BY-4.0                                                      |
 
 The spreadsheet (`universities.csv` / `rankings.csv`) is the shareable 3rd-party
 dataset and the source of truth; `universities.json` is derived from the same run.
@@ -41,6 +41,7 @@ dataset and the source of truth; `universities.json` is derived from the same ru
 
 The QS endpoint takes a `nid` (edition node id) and — crucially — the **live**
 endpoint still serves **old** NIDs in full. So QS history is obtained by:
+
 1. Harvesting QS endpoint NIDs from the **Wayback Machine** CDX API.
 2. Fetching each live, identifying its edition by a fingerprint of known ranks
    (Melbourne / Sydney / NUS), keeping the World University Rankings tables.

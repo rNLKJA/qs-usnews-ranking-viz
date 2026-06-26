@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-ssr
+build
+.vercel
+_archive
+package-lock.json
+public/data
+*.svg
+*.min.*

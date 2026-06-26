@@ -20,7 +20,9 @@ function initialsOf(u: University): string {
 export default function UniversityLogo({ university, size = 40, className }: UniversityLogoProps) {
   const src =
     university.logo ??
-    (university.domain ? `https://www.google.com/s2/favicons?domain=${university.domain}&sz=128` : undefined)
+    (university.domain
+      ? `https://www.google.com/s2/favicons?domain=${university.domain}&sz=128`
+      : undefined)
   const [failed, setFailed] = useState(false)
 
   if (!src || failed) {
